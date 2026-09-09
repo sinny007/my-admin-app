@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { 
   Box, Plus, RefreshCw, Layers, Clock, 
   CheckCircle2, XCircle, Search, Filter, 
-  ChevronDown, X, FilePlus2, Inbox 
+  ChevronDown, X, FilePlus2, Inbox, Loader2
 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 export default function BorrowHistory({ records = [], onRefresh, onAdd, onReturn }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +13,17 @@ export default function BorrowHistory({ records = [], onRefresh, onAdd, onReturn
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', item: '', returnDate: '' });
+
+  // State สำหรับ ConfirmModal
+  const [confirmState, setConfirmState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'ยืนยัน',
+    variant: 'primary',
+    onConfirm: () => {},
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // 1. คำนวณยอดสถิติ
   const stats = useMemo(() => ({
@@ -33,12 +45,26 @@ export default function BorrowHistory({ records = [], onRefresh, onAdd, onReturn
     });
   }, [records, searchTerm, statusFilter]);
 
-  // 3. จัดการการกดปุ่ม "ส่งคืน"
-  const handleReturnClick = async (id) => {
-    if (!window.confirm(`ยืนยันการคืนอุปกรณ์รหัส ${id} ?`)) return;
+  // 3. จัดการการกดปุ่ม "ส่งคืน" — เปิด ConfirmModal แทน window.confirm
+  const handleReturnClick = (id) => {
+    setConfirmState({
+      isOpen: true,
+      title: 'ยืนยันการส่งคืนอุปกรณ์',
+      message: `คุณต้องการบันทึกการส่งคืนรายการรหัส "${id}" หรือไม่?`,
+      confirmText: 'ยืนยันส่งคืน',
+      variant: 'primary',
+      onConfirm: () => executeReturn(id),
+    });
+  };
+
+  // ดำเนินการคืนจริงหลังยืนยัน
+  const executeReturn = async (id) => {
+    setConfirmLoading(true);
     setLoadingId(id);
     await onReturn(id);
     setLoadingId(null);
+    setConfirmLoading(false);
+    setConfirmState(prev => ({ ...prev, isOpen: false }));
   };
 
   // 4. จัดการการบันทึกการยืมใหม่
@@ -250,15 +276,29 @@ export default function BorrowHistory({ records = [], onRefresh, onAdd, onReturn
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 rounded-xl shadow-sm shadow-indigo-100 transition"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-xl shadow-sm shadow-indigo-100 transition flex items-center gap-2 cursor-pointer"
                 >
-                  {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                  {isSubmitting ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" />กำลังบันทึก...</>
+                  ) : 'บันทึกข้อมูล'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Confirm Return Modal */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        onClose={() => !confirmLoading && setConfirmState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        variant={confirmState.variant}
+        loading={confirmLoading}
+      />
     </div>
   );
 }

@@ -1,13 +1,19 @@
 export const formatThaiDate = (dateStr) => {
-  if (!dateStr || dateStr.includes('1899-12-30') || dateStr === '-') {
+  if (!dateStr || dateStr === '-') {
     return '-';
   }
 
-  // ตัดขยะ 1899-12-30 ออก
-  const cleanStr = dateStr.replace(/1899-12-30T[^\s]+/g, '').trim();
-  const date = new Date(cleanStr);
+  // จัดการกรณี Google Sheets คืนค่าเฉพาะเวลาซึ่งมักติด 1899-12-30 มาด้วย
+  if (typeof dateStr === 'string' && dateStr.includes('1899-12-30')) {
+    const timeMatch = dateStr.match(/(\d{2}):(\d{2})/);
+    if (timeMatch) {
+      return `${timeMatch[1]}:${timeMatch[2]} น.`;
+    }
+    return '-';
+  }
 
-  if (isNaN(date.getTime())) return '-';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return String(dateStr);
 
   const months = [
     'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',

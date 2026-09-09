@@ -11,17 +11,18 @@ import {
   ArrowLeft, 
   Loader2, 
   CheckCircle2, 
-  AlertCircle,
-  ChevronDown
+  AlertCircle
 } from 'lucide-react';
+import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
-// รองรับทั้ง Vite (import.meta.env) และ Create React App (process.env)
-const APPS_SCRIPT_URL = 
+const DEFAULT_APPS_SCRIPT_URL = 
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbwm5p5wNDrOKljk058t6KkQK7bn35LgmkyW5TxB_X_mN98x4Ib13nmy-ArTIfWwJT7hvQ/exec";
+  "https://script.google.com/macros/s/AKfycbyizcvNesWFWqfBt41WI56A-D0XOaeTspGUJwWV7ua2lE4R3bA1r332A86DSl4yeVwSOw/exec";
 
-export default function RegisterForm({ onSwitchToLogin }) {
+export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUrl }) {
+  const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -35,7 +36,6 @@ export default function RegisterForm({ onSwitchToLogin }) {
   const [showAdminKey, setShowAdminKey] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // ป้องกัน State update เมื่อ Component ถูก unmount
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -56,31 +56,44 @@ export default function RegisterForm({ onSwitchToLogin }) {
     });
   };
 
+  const setRole = (role) => {
+    setFormData((prev) => ({
+      ...prev,
+      role,
+      adminKey: role === 'user' ? '' : prev.adminKey
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
 
-    // Client-side Validation
     const trimmedUsername = formData.username.trim();
     const trimmedPassword = formData.password.trim();
     const trimmedName = formData.name.trim();
     const trimmedAdminKey = formData.adminKey.trim();
 
     if (!trimmedUsername || !trimmedPassword || !trimmedName) {
-      setMessage({ type: 'error', text: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+      const err = 'กรุณากรอกข้อมูลให้ครบถ้วน';
+      setMessage({ type: 'error', text: err });
+      toast.error(err);
       setLoading(false);
       return;
     }
 
     if (trimmedPassword.length < 6) {
-      setMessage({ type: 'error', text: 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร' });
+      const err = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
+      setMessage({ type: 'error', text: err });
+      toast.error(err);
       setLoading(false);
       return;
     }
 
     if (formData.role === 'admin' && !trimmedAdminKey) {
-      setMessage({ type: 'error', text: 'กรุณากรอกรหัสลับผู้ดูแลระบบ (Admin Key)' });
+      const err = 'กรุณากรอกรหัสลับผู้ดูแลระบบ (Admin Key)';
+      setMessage({ type: 'error', text: err });
+      toast.error(err);
       setLoading(false);
       return;
     }
@@ -109,7 +122,7 @@ export default function RegisterForm({ onSwitchToLogin }) {
 
       try {
         result = JSON.parse(rawText);
-      } catch (parseError) {
+      } catch {
         console.error("Response Parse Error:", rawText);
         throw new Error("ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (ข้อมูลไม่ใช่ JSON)");
       }
@@ -117,7 +130,20 @@ export default function RegisterForm({ onSwitchToLogin }) {
       if (!isMounted.current) return;
 
       if (result.success || result.status === 'success') {
-        setMessage({ type: 'success', text: result.message || 'สมัครสมาชิกสำเร็จ!' });
+        const successMsg = result.message || 'สมัครสมาชิกสำเร็จเรียบร้อยแล้ว!';
+        setMessage({ type: 'success', text: successMsg });
+        toast.success(successMsg);
+
+        // ยิง Confetti เฉลิมฉลอง
+        try {
+          confetti({
+            particleCount: 90,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        } catch {
+          // ignore
+        }
         
         // รีเซ็ตฟอร์ม
         setFormData({
@@ -127,16 +153,25 @@ export default function RegisterForm({ onSwitchToLogin }) {
           role: 'user',
           adminKey: ''
         });
+
+        if (onRegisterSuccess) {
+          setTimeout(() => {
+            if (isMounted.current) {
+              onRegisterSuccess();
+            }
+          }, 1200);
+        }
       } else {
-        setMessage({ type: 'error', text: result.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
+        const err = result.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+        setMessage({ type: 'error', text: err });
+        toast.error(err);
       }
     } catch (err) {
       console.error("Register Error:", err);
       if (isMounted.current) {
-        setMessage({ 
-          type: 'error', 
-          text: err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต' 
-        });
+        const errText = err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+        setMessage({ type: 'error', text: errText });
+        toast.error(errText);
       }
     } finally {
       if (isMounted.current) {
@@ -146,51 +181,56 @@ export default function RegisterForm({ onSwitchToLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      
-      {/* Background Decorative Elements */}
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100/70 to-indigo-50/40 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans select-none">
+      {/* Subtle Ambient Highlights */}
+      <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-50/50 to-transparent pointer-events-none" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-sky-200/30 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Main Card */}
-      <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-10 relative z-10 my-8 transition-all duration-300">
+      {/* Main Clean Card */}
+      <div className="max-w-lg w-full bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-7 sm:p-9 relative z-10 my-8 transition-all duration-300">
         
         {/* Logo & Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600/10 text-indigo-600 rounded-2xl mb-4 shadow-inner">
-            <UserPlus className="w-8 h-8" />
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-24 h-24 sm:w-28 sm:h-28 object-contain select-none transition-transform hover:scale-105 duration-200" 
+            />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">
-            สมัครสมาชิก
+          
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+            สมัครสมาชิกเข้าสู่ระบบ
           </h2>
-          <p className="text-sm text-slate-500 mt-2">
-            กรอกข้อมูลเพื่อสร้างบัญชีเข้าใช้งานระบบยืม-คืน
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            สร้างบัญชีเพื่อเริ่มต้นใช้งานระบบยืม-คืนอุปกรณ์
           </p>
         </div>
 
-        {/* Message Alert */}
+        {/* Message Alert Banner */}
         {message.text && (
-          <div className={`mb-6 p-4 text-sm rounded-2xl border flex items-start justify-between gap-3 animate-fade-in ${
+          <div className={`mb-5 p-3.5 text-xs sm:text-sm rounded-2xl border flex items-start justify-between gap-3 animate-in fade-in duration-200 ${
             message.type === 'success' 
               ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
               : 'bg-rose-50 border-rose-200 text-rose-700'
           }`}>
             <div className="flex items-start gap-2.5">
               {message.type === 'success' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               )}
-              <span className="leading-relaxed">{message.text}</span>
+              <span className="leading-relaxed font-medium">{message.text}</span>
             </div>
             
             {message.type === 'success' && onSwitchToLogin && (
               <button
                 type="button"
                 onClick={onSwitchToLogin}
-                className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl shadow-sm transition duration-150"
+                className="shrink-0 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-sm transition duration-150 cursor-pointer"
               >
-                เข้าสู่ระบบ
+                เข้าสู่ระบบทันที
               </button>
             )}
           </div>
@@ -201,20 +241,20 @@ export default function RegisterForm({ onSwitchToLogin }) {
           
           {/* Full Name */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               ชื่อ-นามสกุล
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <IdCard className="w-5 h-5" />
+                <IdCard className="w-4 h-4" />
               </div>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="นายสมชาย ใจดี"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm"
+                placeholder="เช่น นายสมชาย ใจดี"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/90 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm font-medium"
                 required
               />
             </div>
@@ -222,20 +262,20 @@ export default function RegisterForm({ onSwitchToLogin }) {
 
           {/* Username */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               ชื่อผู้ใช้งาน (Username)
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <User className="w-5 h-5" />
+                <User className="w-4 h-4" />
               </div>
               <input
                 type="text"
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="ระบุ Username"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm"
+                placeholder="เช่น somchai.j"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/90 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm font-medium"
                 required
               />
             </div>
@@ -243,12 +283,12 @@ export default function RegisterForm({ onSwitchToLogin }) {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               รหัสผ่าน (Password)
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Lock className="w-5 h-5" />
+                <Lock className="w-4 h-4" />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
@@ -256,72 +296,85 @@ export default function RegisterForm({ onSwitchToLogin }) {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="อย่างน้อย 6 ตัวอักษร"
-                className="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm"
+                className="w-full pl-10 pr-11 py-2.5 bg-slate-50/90 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm font-medium"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-indigo-600 transition-colors focus:outline-none"
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-indigo-600 transition-colors focus:outline-none cursor-pointer"
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {/* Role Selection */}
+          {/* Role Selection (Segmented Control) */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              บทบาท (Role)
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              ประเภทบัญชีผู้ใช้ (Role)
             </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Shield className="w-5 h-5" />
-              </div>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200 text-sm appearance-none cursor-pointer"
+            <div className="grid grid-cols-2 gap-2.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/80">
+              <button
+                type="button"
+                onClick={() => setRole('user')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+                  formData.role === 'user'
+                    ? 'bg-white text-indigo-600 shadow-sm shadow-slate-200'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
               >
-                <option value="user">ผู้ใช้งานทั่วไป / บุคลากร</option>
-                <option value="admin">ผู้ดูแลระบบ (Admin)</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                <ChevronDown className="w-4 h-4" />
-              </div>
+                <User className="w-4 h-4" />
+                <span>ผู้ใช้ทั่วไป / บุคลากร</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRole('admin')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+                  formData.role === 'admin'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm shadow-amber-500/20'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                <span>ผู้ดูแลระบบ (Admin)</span>
+              </button>
             </div>
           </div>
 
-          {/* Admin Secret Key */}
+          {/* Admin Secret Key (if role is admin) */}
           {formData.role === 'admin' && (
-            <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl space-y-1.5 animate-fade-in">
-              <label className="block text-sm font-semibold text-amber-800">
-                Admin Secret Key
+            <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-1.5 animate-in fade-in zoom-in-95 duration-200">
+              <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider">
+                รหัสลับสำหรับผู้ดูแลระบบ (Admin Secret Key)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-amber-500">
-                  <KeyRound className="w-5 h-5" />
+                  <KeyRound className="w-4 h-4" />
                 </div>
                 <input
                   type={showAdminKey ? "text" : "password"}
                   name="adminKey"
                   value={formData.adminKey}
                   onChange={handleChange}
-                  placeholder="กรอกรหัสลับสำหรับ Admin"
-                  className="w-full pl-11 pr-12 py-2.5 bg-white border border-amber-300 rounded-xl text-slate-800 placeholder-amber-400/70 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition duration-200 text-sm"
+                  placeholder="กรอกรหัสยืนยันสิทธิ์ Admin"
+                  className="w-full pl-10 pr-11 py-2 bg-white border border-amber-300 rounded-xl text-slate-800 placeholder-amber-400/70 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition duration-200 text-sm font-medium"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowAdminKey(!showAdminKey)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-amber-500 hover:text-amber-700 transition-colors focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-amber-500 hover:text-amber-700 transition-colors focus:outline-none cursor-pointer"
                   tabIndex={-1}
                 >
-                  {showAdminKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <p className="text-[11px] text-amber-700">
+                * ต้องระบุรหัสลับที่ถูกต้องเพื่ออนุมัติสิทธิ์เข้าถึงระบบผู้ดูแล
+              </p>
             </div>
           )}
 
@@ -329,33 +382,33 @@ export default function RegisterForm({ onSwitchToLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-500/25 transition duration-200 flex items-center justify-center gap-2 disabled:bg-indigo-300 disabled:shadow-none disabled:cursor-not-allowed text-sm"
+            className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-indigo-600/20 transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed text-sm cursor-pointer"
           >
             {loading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span>กำลังบันทึกข้อมูล...</span>
               </>
             ) : (
               <>
-                <UserPlus className="w-5 h-5" />
-                <span>สมัครสมาชิก</span>
+                <UserPlus className="w-4 h-4" />
+                <span>ยืนยันการสมัครสมาชิก</span>
               </>
             )}
           </button>
         </form>
 
-        {/* Footer Link */}
+        {/* Footer Link to Login */}
         {onSwitchToLogin && (
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center flex items-center justify-center gap-1.5 text-sm">
-            <span className="text-slate-500">มีบัญชีอยู่แล้ว?</span>
+          <div className="mt-6 pt-5 border-t border-slate-100 text-center flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+            <span className="text-slate-500">มีบัญชีผู้ใช้งานอยู่แล้ว?</span>
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none transition-colors inline-flex items-center gap-1"
+              className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline focus:outline-none transition-colors inline-flex items-center gap-1 cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>เข้าสู่ระบบ</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>กลับสู่หน้าเข้าสู่ระบบ</span>
             </button>
           </div>
         )}
@@ -363,4 +416,4 @@ export default function RegisterForm({ onSwitchToLogin }) {
       </div>
     </div>
   );
-}
+}
