@@ -22,7 +22,7 @@ import {
 const API_URL = 
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbwvgOZbVC1hLEoSpT0lzfsP3F98gWDed2xUXVHvIDVZ6q6YU_uqZfQPoCR7ooXoiaZufA/exec ";
+  "https://script.google.com/macros/s/AKfycbwm5p5wNDrOKljk058t6KkQK7bn35LgmkyW5TxB_X_mN98x4Ib13nmy-ArTIfWwJT7hvQ/exec";
 
 export default function UserDashboard({ user, onLogout }) {
   const [devices, setDevices] = useState([]);
