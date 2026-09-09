@@ -24,12 +24,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmModal from './ConfirmModal';
+import ProfileModal from './ProfileModal';
+import { IT_CATEGORIES, DEFAULT_CATEGORY } from '../constants/itCategories';
 
 // ตั้งค่า URL ของ Apps Script
 const DEFAULT_APPS_SCRIPT_URL = 
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) || 
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbyizcvNesWFWqfBt41WI56A-D0XOaeTspGUJwWV7ua2lE4R3bA1r332A86DSl4yeVwSOw/exec";
+  "https://script.google.com/macros/s/AKfycbz1cDl0Je-RjFxboeoTY2NRLL3B71q0Tzl7JEpasaArwhhIzShHPPakZagGHft6p4x3rQ/exec";
 
 // Utility แปลงวันที่
 const formatDate = (dateStr) => {
@@ -60,7 +62,7 @@ const loadSarabunFont = async () => {
   }
 };
 
-export default function AdminDashboard({ user, onLogout, apiUrl }) {
+export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
   const [devices, setDevices] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -70,7 +72,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
 
   const [newDevice, setNewDevice] = useState({
     name: '',
-    category: 'Laptop',
+    category: DEFAULT_CATEGORY,
     status: 'พร้อมใช้งาน',
     imageUrl: ''
   });
@@ -78,6 +80,12 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ทั้งหมด');
   const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // รวบรวมหมวดหมู่ทั้งหมดที่มีในอุปกรณ์ + หมวดหมู่มาตรฐานทั้งหมด
+  const allAvailableCategories = Array.from(
+    new Set([...IT_CATEGORIES, ...devices.map(d => d.category).filter(Boolean)])
+  );
 
   // State สำหรับ Confirm Modal
   const [confirmState, setConfirmState] = useState({
@@ -156,7 +164,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
 
       if (data.status === 'success' || data.success) {
         toast.success(`เพิ่มอุปกรณ์ "${newDevice.name}" เข้าสู่ระบบสำเร็จ`);
-        setNewDevice({ name: '', category: 'Laptop', status: 'พร้อมใช้งาน', imageUrl: '' });
+        setNewDevice({ name: '', category: DEFAULT_CATEGORY, status: 'พร้อมใช้งาน', imageUrl: '' });
         fetchData(true);
       } else {
         toast.error(data.message || 'เกิดข้อผิดพลาดในการบันทึก');
@@ -429,15 +437,29 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
           </div>
           
           <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
-            <div className="bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 shrink-0 ring-1 ring-indigo-400/20">
-                <img src="/logo.png" alt="Admin" className="w-full h-full object-cover object-top" />
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(true)}
+              className="bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all duration-150 cursor-pointer group shadow-2xs active:scale-98"
+              title="คลิกเพื่อแก้ไขข้อมูลโปรไฟล์และเปลี่ยนรหัสผ่าน"
+            >
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 shrink-0 ring-1 ring-indigo-400/20 bg-indigo-50 flex items-center justify-center">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="Admin" className="w-full h-full object-cover" />
+                ) : (
+                  <img src="/logo.png" alt="Admin" className="w-full h-full object-cover object-top" />
+                )}
               </div>
-              <span className="text-slate-800">{user?.name || user?.username || 'ผู้ดูแลระบบ'}</span>
+              <span className="text-slate-800 group-hover:text-indigo-600 transition-colors">
+                {user?.name || user?.username || 'ผู้ดูแลระบบ'}
+              </span>
               <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] uppercase px-2 py-0.5 rounded-full font-bold">
                 Admin
               </span>
-            </div>
+              <span className="text-[11px] text-slate-400 group-hover:text-indigo-600 transition-colors">
+                ⚙️ โปรไฟล์
+              </span>
+            </button>
 
             <button
               type="button"
@@ -567,20 +589,18 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
                   />
                 </div>
 
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-3">
                   <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    หมวดหมู่
+                    หมวดหมู่อุปกรณ์ (IT / Computer)
                   </label>
                   <select
                     value={newDevice.category}
                     onChange={(e) => setNewDevice({ ...newDevice, category: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium cursor-pointer"
                   >
-                    <option value="Laptop">Laptop</option>
-                    <option value="Tablet">Tablet</option>
-                    <option value="Accessories">Accessories</option>
-                    <option value="Monitor">Monitor</option>
-                    <option value="Other">อื่นๆ</option>
+                    {IT_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -693,11 +713,9 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
                     className="w-full pl-9 pr-3.5 py-2 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium cursor-pointer"
                   >
                     <option value="ทั้งหมด">หมวดหมู่ทั้งหมด</option>
-                    <option value="Laptop">Laptop</option>
-                    <option value="Tablet">Tablet</option>
-                    <option value="Accessories">Accessories</option>
-                    <option value="Monitor">Monitor</option>
-                    <option value="Other">อื่นๆ</option>
+                    {allAvailableCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -1024,6 +1042,15 @@ export default function AdminDashboard({ user, onLogout, apiUrl }) {
           loading={actionLoading}
           onConfirm={confirmState.onConfirm}
           onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+        />
+
+        {/* Profile & Security Modal สำหรับ Admin */}
+        <ProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          user={user}
+          onUpdateUser={onUpdateUser}
+          apiUrl={APPS_SCRIPT_URL}
         />
 
       </div>

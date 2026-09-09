@@ -101,6 +101,15 @@ export default function App() {
     }
   };
 
+  const handleUpdateUser = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    try {
+      localStorage.setItem('app_user', JSON.stringify(updatedUser));
+    } catch {
+      // ignore
+    }
+  };
+
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('app_user');
@@ -128,9 +137,19 @@ export default function App() {
 
       {view === 'dashboard' && currentUser ? (
         currentUser.role === 'admin' ? (
-          <AdminDashboard user={currentUser} onLogout={handleLogout} apiUrl={API_URL} />
+          <AdminDashboard 
+            user={currentUser} 
+            onLogout={handleLogout} 
+            apiUrl={API_URL} 
+            onUpdateUser={handleUpdateUser} 
+          />
         ) : (
-          <UserDashboard user={currentUser} onLogout={handleLogout} apiUrl={API_URL} />
+          <UserDashboard 
+            user={currentUser} 
+            onLogout={handleLogout} 
+            apiUrl={API_URL} 
+            onUpdateUser={handleUpdateUser} 
+          />
         )
       ) : view === 'register' ? (
         <RegisterForm

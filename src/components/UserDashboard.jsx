@@ -19,11 +19,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import ProfileModal from './ProfileModal';
 
 const DEFAULT_API_URL = 
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbyizcvNesWFWqfBt41WI56A-D0XOaeTspGUJwWV7ua2lE4R3bA1r332A86DSl4yeVwSOw/exec";
+  "https://script.google.com/macros/s/AKfycbz1cDl0Je-RjFxboeoTY2NRLL3B71q0Tzl7JEpasaArwhhIzShHPPakZagGHft6p4x3rQ/exec";
 
 // Helper: จัดรูปแบบวันที่ให้อ่านง่าย
 const formatDisplayDate = (dateStr) => {
@@ -40,9 +41,10 @@ const formatDisplayDate = (dateStr) => {
   }
 };
 
-export default function UserDashboard({ user, onLogout, apiUrl }) {
+export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) {
   const API_URL = apiUrl || DEFAULT_API_URL;
   const [devices, setDevices] = useState([]);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -309,16 +311,28 @@ export default function UserDashboard({ user, onLogout, apiUrl }) {
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-3 sm:pt-0 border-slate-100">
-            <div className="flex items-center gap-2.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 shrink-0 ring-1 ring-indigo-400/20">
-                <img src="/logo.png" alt="User" className="w-full h-full object-cover object-top" />
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-2.5 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/80 transition-all cursor-pointer group shadow-2xs active:scale-98"
+              title="คลิกเพื่อแก้ไขข้อมูลโปรไฟล์และเปลี่ยนรหัสผ่าน"
+            >
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 shrink-0 ring-1 ring-indigo-400/20 bg-indigo-50 flex items-center justify-center">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="User" className="w-full h-full object-cover" />
+                ) : (
+                  <img src="/logo.png" alt="User" className="w-full h-full object-cover object-top" />
+                )}
               </div>
-              <div className="text-xs">
+              <div className="text-xs text-left">
                 <span className="text-slate-500">ผู้ใช้งาน: </span>
-                <strong className="text-slate-800 font-bold">{user?.name || user?.username || 'ผู้ใช้งาน'}</strong>
+                <strong className="text-slate-800 font-bold group-hover:text-indigo-600 transition-colors">
+                  {user?.name || user?.username || 'ผู้ใช้งาน'}
+                </strong>
                 {user?.username && <span className="text-indigo-600 ml-1 font-mono">(@{user.username})</span>}
+                <span className="text-[10px] text-slate-400 ml-1.5 group-hover:text-indigo-600">⚙️ โปรไฟล์</span>
               </div>
-            </div>
+            </button>
 
             <button 
               type="button"
@@ -880,6 +894,15 @@ export default function UserDashboard({ user, onLogout, apiUrl }) {
           </div>
         </div>
       )}
+
+      {/* Profile & Security Modal สำหรับ User */}
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        onUpdateUser={onUpdateUser}
+        apiUrl={API_URL}
+      />
 
     </div>
   );
