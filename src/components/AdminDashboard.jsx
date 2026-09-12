@@ -1,46 +1,43 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
-import { 
-  Laptop, 
-  LogOut, 
-  Plus, 
-  RefreshCw, 
-  Search, 
-  Filter, 
-  Clock, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Trash2, 
-  Undo2, 
-  FileSpreadsheet, 
-  FileText, 
-  ImageOff, 
-  Boxes, 
-  PackageCheck, 
-  History, 
-  Loader2
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Laptop,
+  LogOut,
+  Plus,
+  RefreshCw,
+  Search,
+  Filter,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Trash2,
+  Undo2,
+  FileSpreadsheet,
+  FileText,
+  ImageOff,
+  Boxes,
+  PackageCheck,
+  History,
+  Loader2,
+  ShieldAlert,
+  User,
+  Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmModal from './ConfirmModal';
 import ProfileModal from './ProfileModal';
 import { IT_CATEGORIES, DEFAULT_CATEGORY } from '../constants/itCategories';
 
-// ตั้งค่า URL ของ Apps Script
-const DEFAULT_APPS_SCRIPT_URL = 
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) || 
+const DEFAULT_APPS_SCRIPT_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbz1cDl0Je-RjFxboeoTY2NRLL3B71q0Tzl7JEpasaArwhhIzShHPPakZagGHft6p4x3rQ/exec";
+  "https://script.google.com/macros/s/AKfycbxG9jHtv4457GsbJ0w0xG4_ILq09s_fzMYGB5diMracMOq_abJsW27n2CvXCdVVPngpXw/exec";
 
-// Utility แปลงวันที่
 const formatDate = (dateStr) => {
   if (!dateStr || dateStr === '-') return '-';
   const parsedDate = new Date(dateStr);
   return isNaN(parsedDate.getTime()) ? dateStr : parsedDate.toLocaleDateString('th-TH');
 };
 
-// Helper โหลดฟอนต์ Sarabun สำหรับ export PDF ให้รองรับภาษาไทย
 let sarabunBase64 = null;
 const loadSarabunFont = async () => {
   if (sarabunBase64) return sarabunBase64;
@@ -50,67 +47,54 @@ const loadSarabunFont = async () => {
     const buffer = await res.arrayBuffer();
     let binary = '';
     const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
+    for (let i = 0; i < bytes.byteLength; i++) { binary += String.fromCharCode(bytes[i]); }
     sarabunBase64 = window.btoa(binary);
     return sarabunBase64;
   } catch (err) {
-    console.warn('Cannot load Thai font, fallback to default:', err);
+    console.warn('Cannot load Thai font:', err);
     return null;
   }
 };
 
 export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
-  const [devices, setDevices] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const currentRole = user?.role || 'admin';
+
+  const [devices, setDevices] = useState(() => {
+    try { const c = localStorage.getItem('app_admin_devices'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
+  const [transactions, setTransactions] = useState(() => {
+    try { const c = localStorage.getItem('app_admin_transactions'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
+  const [loading, setLoading] = useState(() => {
+    try { return !localStorage.getItem('app_admin_devices'); } catch { return true; }
+  });
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('devices');
-
-  const [newDevice, setNewDevice] = useState({
-    name: '',
-    category: DEFAULT_CATEGORY,
-    status: 'พร้อมใช้งาน',
-    imageUrl: ''
-  });
-
+  const [newDevice, setNewDevice] = useState({ name: '', category: DEFAULT_CATEGORY, status: 'พร้อมใช้งาน', imageUrl: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ทั้งหมด');
   const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // รวบรวมหมวดหมู่ทั้งหมดที่มีในอุปกรณ์ + หมวดหมู่มาตรฐานทั้งหมด
-  const allAvailableCategories = Array.from(
-    new Set([...IT_CATEGORIES, ...devices.map(d => d.category).filter(Boolean)])
-  );
+  const allAvailableCategories = Array.from(new Set([...IT_CATEGORIES, ...devices.map(d => d.category).filter(Boolean)]));
 
-  // State สำหรับ Confirm Modal
   const [confirmState, setConfirmState] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    confirmText: 'ยืนยัน',
-    variant: 'danger',
-    onConfirm: () => {}
+    isOpen: false, title: '', message: '', confirmText: 'ยืนยัน', variant: 'danger', onConfirm: () => {}
   });
 
-  // ดึงสิทธิ์ User Role จาก Props (Default เป็น 'admin')
-  const currentRole = user?.role || 'admin';
-
-  // ดึงข้อมูลทั้งหมดจาก Google Apps Script
   const fetchData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const res = await fetch(`${APPS_SCRIPT_URL}?action=getData&role=${currentRole}`, { 
-        redirect: 'follow' 
-      });
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=getData&role=${currentRole}`, { redirect: 'follow' });
       const data = await res.json();
       if (data.status === 'success' || data.success) {
         setDevices(data.devices || []);
         setTransactions(data.transactions || []);
+        try {
+          localStorage.setItem('app_admin_devices', JSON.stringify(data.devices || []));
+          localStorage.setItem('app_admin_transactions', JSON.stringify(data.transactions || []));
+        } catch { /* ignore */ }
         if (isSilent) toast.success('อัปเดตข้อมูลล่าสุดเรียบร้อยแล้ว');
       } else {
         toast.error(`ข้อผิดพลาดจากเซิร์ฟเวอร์: ${data.message || 'ไม่ทราบสาเหตุ'}`);
@@ -123,18 +107,11 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
     }
   }, [currentRole, APPS_SCRIPT_URL]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const hasInitialCache = useRef(devices.length > 0);
+  useEffect(() => { fetchData(hasInitialCache.current); }, [fetchData]);
 
-  // Helper สำหรับทำ POST request โดยแนบ userRole ไปด้วยเสมอ
   const postToAppsScript = async (payload) => {
-    const fullPayload = {
-      ...payload,
-      userRole: currentRole,
-      username: user?.username || user?.name || 'admin'
-    };
-
+    const fullPayload = { ...payload, userRole: currentRole, username: user?.username || user?.name || 'admin' };
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -144,107 +121,65 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
     return res.json();
   };
 
-  // เพิ่มอุปกรณ์ใหม่
   const handleAddDevice = async (e) => {
     e.preventDefault();
-    if (!newDevice.name.trim()) {
-      toast.error('กรุณากรอกชื่ออุปกรณ์');
-      return;
-    }
-
+    if (!newDevice.name.trim()) { toast.error('กรุณากรอกชื่ออุปกรณ์'); return; }
     setActionLoading(true);
     try {
       const data = await postToAppsScript({
-        action: 'add_device',
-        name: newDevice.name.trim(),
-        category: newDevice.category,
-        status: newDevice.status,
+        action: 'add_device', name: newDevice.name.trim(),
+        category: newDevice.category, status: newDevice.status,
         imageUrl: newDevice.imageUrl.trim() || 'https://via.placeholder.com/150?text=No+Image'
       });
-
       if (data.status === 'success' || data.success) {
         toast.success(`เพิ่มอุปกรณ์ "${newDevice.name}" เข้าสู่ระบบสำเร็จ`);
         setNewDevice({ name: '', category: DEFAULT_CATEGORY, status: 'พร้อมใช้งาน', imageUrl: '' });
         fetchData(true);
-      } else {
-        toast.error(data.message || 'เกิดข้อผิดพลาดในการบันทึก');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('เกิดข้อผิดพลาดในการส่งข้อมูล');
-    } finally {
-      setActionLoading(false);
-    }
+      } else { toast.error(data.message || 'เกิดข้อผิดพลาดในการบันทึก'); }
+    } catch (err) { console.error(err); toast.error('เกิดข้อผิดพลาดในการส่งข้อมูล'); }
+    finally { setActionLoading(false); }
   };
 
-  // เปิด Modal รับคืนอุปกรณ์
   const promptReturnDevice = (transaction) => {
     setConfirmState({
-      isOpen: true,
-      title: 'ยืนยันการรับคืนอุปกรณ์',
-      message: `คุณต้องการบันทึกรับคืนอุปกรณ์ "${transaction.deviceName}" จากคุณ ${transaction.username} หรือไม่?`,
-      confirmText: 'รับคืนอุปกรณ์',
-      variant: 'primary',
+      isOpen: true, title: 'ยืนยันการรับคืนอุปกรณ์',
+      message: `ยืนยันรับคืนอุปกรณ์ "${transaction.deviceName}" จากคุณ ${transaction.username}?`,
+      confirmText: 'รับคืนอุปกรณ์', variant: 'primary',
       onConfirm: async () => {
         setActionLoading(true);
         try {
-          const data = await postToAppsScript({
-            action: 'return_device',
-            transId: transaction.id,
-            deviceId: transaction.deviceId
-          });
-
+          const data = await postToAppsScript({ action: 'returnDevice', transId: transaction.id, deviceId: transaction.deviceId });
           if (data.status === 'success' || data.success) {
             toast.success(`รับคืนอุปกรณ์ "${transaction.deviceName}" สำเร็จแล้ว`);
-            setConfirmState((prev) => ({ ...prev, isOpen: false }));
+            setConfirmState(prev => ({ ...prev, isOpen: false }));
             fetchData(true);
-          } else {
-            toast.error(data.message || 'เกิดข้อผิดพลาดในการคืนอุปกรณ์');
-          }
-        } catch (err) {
-          console.error(err);
-          toast.error('เกิดข้อผิดพลาดในการส่งข้อมูลคืนอุปกรณ์');
-        } finally {
-          setActionLoading(false);
-        }
+          } else { toast.error(data.message || 'เกิดข้อผิดพลาดในการคืนอุปกรณ์'); }
+        } catch (err) { console.error(err); toast.error('เกิดข้อผิดพลาดในการส่งข้อมูลคืนอุปกรณ์'); }
+        finally { setActionLoading(false); }
       }
     });
   };
 
-  // เปิด Modal ลบอุปกรณ์
   const promptDeleteDevice = (deviceId, deviceName) => {
     setConfirmState({
-      isOpen: true,
-      title: 'ยืนยันการลบอุปกรณ์',
-      message: `คุณแน่ใจหรือไม่ที่จะลบอุปกรณ์ "${deviceName}" (รหัส: ${deviceId}) ออกจากระบบอย่างถาวร?`,
-      confirmText: 'ลบอุปกรณ์',
-      variant: 'danger',
+      isOpen: true, title: 'ยืนยันการลบอุปกรณ์',
+      message: `แน่ใจหรือไม่ที่จะลบอุปกรณ์ "${deviceName}" ออกจากระบบอย่างถาวร?`,
+      confirmText: 'ลบอุปกรณ์', variant: 'danger',
       onConfirm: async () => {
         setActionLoading(true);
         try {
-          const data = await postToAppsScript({
-            action: 'delete_device',
-            deviceId: deviceId
-          });
-
+          const data = await postToAppsScript({ action: 'delete_device', deviceId });
           if (data.status === 'success' || data.success) {
             toast.success(`ลบอุปกรณ์ "${deviceName}" เรียบร้อยแล้ว`);
-            setConfirmState((prev) => ({ ...prev, isOpen: false }));
+            setConfirmState(prev => ({ ...prev, isOpen: false }));
             fetchData(true);
-          } else {
-            toast.error(data.message || 'ไม่สามารถลบอุปกรณ์ได้');
-          }
-        } catch (err) {
-          console.error(err);
-          toast.error('เกิดข้อผิดพลาดในการส่งข้อมูลลบอุปกรณ์');
-        } finally {
-          setActionLoading(false);
-        }
+          } else { toast.error(data.message || 'ไม่สามารถลบอุปกรณ์ได้'); }
+        } catch (err) { console.error(err); toast.error('เกิดข้อผิดพลาดในการส่งข้อมูลลบอุปกรณ์'); }
+        finally { setActionLoading(false); }
       }
     });
   };
 
-  // Filter อุปกรณ์
   const filteredDevices = devices.filter(d => {
     const deviceName = d.name ? String(d.name).toLowerCase() : '';
     const deviceId = d.id ? String(d.id).toLowerCase() : '';
@@ -254,303 +189,225 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
     return matchSearch && matchCategory && matchStatus;
   });
 
-  // คำนวณสถานะเกินกำหนดคืน (Overdue) ฝั่ง Client
   const checkIsOverdue = (t) => {
     if (!t || !t.expectedReturnDate) return false;
     if (['returned', 'คืนแล้ว'].includes(t.status)) return false;
     const expDate = new Date(t.expectedReturnDate);
     if (isNaN(expDate.getTime())) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    expDate.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0); expDate.setHours(0, 0, 0, 0);
     return expDate < today;
   };
 
-  const borrowedTransactions = transactions.filter(t => 
-    ['borrowed', 'ถูกยืม', 'กำลังยืม'].includes(t.status)
-  );
-
+  const borrowedTransactions = transactions.filter(t => ['borrowed', 'ถูกยืม', 'กำลังยืม'].includes(t.status));
   const overdueCount = borrowedTransactions.filter(t => checkIsOverdue(t)).length;
 
-  // Export ทะเบียนอุปกรณ์เป็น Excel
-  const exportDevicesToExcel = () => {
+  // ─── Export helpers ───────────────────────────────────────────────
+  const exportDevicesToExcel = async () => {
     try {
+      toast.info('กำลังเตรียมส่งออกไฟล์ Excel...');
+      const XLSX = await import('xlsx');
       const formattedData = filteredDevices.map(item => ({
-        "รหัสอุปกรณ์ (ID)": item.id || '-',
-        "ชื่ออุปกรณ์": item.name || '-',
-        "หมวดหมู่": item.category || '-',
-        "สถานะ": item.status || '-',
-        "รูปภาพ URL": item.imageUrl || '-'
+        "รหัสอุปกรณ์ (ID)": item.id || '-', "ชื่ออุปกรณ์": item.name || '-',
+        "หมวดหมู่": item.category || '-', "สถานะ": item.status || '-', "รูปภาพ URL": item.imageUrl || '-'
       }));
-
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Devices");
       XLSX.writeFile(workbook, `รายงานอุปกรณ์_IT_${new Date().toISOString().split('T')[0]}.xlsx`);
       toast.success('ส่งออกไฟล์ Excel เรียบร้อยแล้ว');
-    } catch {
-      toast.error('เกิดข้อผิดพลาดในการส่งออก Excel');
-    }
+    } catch (err) { console.error(err); toast.error('เกิดข้อผิดพลาดในการส่งออก Excel'); }
   };
 
-  // Export ทะเบียนอุปกรณ์เป็น PDF (รองรับภาษาไทย)
   const exportDevicesToPDF = async () => {
     try {
+      toast.info('กำลังประมวลผลเอกสาร PDF...');
+      const [{ default: jsPDF }, { default: autoTable }, font] = await Promise.all([import('jspdf'), import('jspdf-autotable'), loadSarabunFont()]);
       const doc = new jsPDF();
-      const font = await loadSarabunFont();
-      if (font) {
-        doc.addFileToVFS('Sarabun-Regular.ttf', font);
-        doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
-        doc.setFont('Sarabun');
-      }
-
-      doc.setFontSize(16);
-      doc.text("รายงานทะเบียนอุปกรณ์ IT ทั้งหมด", 14, 15);
-      doc.setFontSize(10);
-      doc.text(`ข้อมูล ณ วันที่: ${new Date().toLocaleDateString('th-TH')}`, 14, 22);
-
-      const tableColumn = ["รหัสอุปกรณ์", "ชื่ออุปกรณ์", "หมวดหมู่", "สถานะ"];
-      const tableRows = filteredDevices.map(item => [
-        String(item.id || '-'),
-        String(item.name || '-'),
-        String(item.category || '-'),
-        String(item.status || '-')
-      ]);
-
+      if (font) { doc.addFileToVFS('Sarabun-Regular.ttf', font); doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal'); doc.setFont('Sarabun'); }
+      doc.setFontSize(16); doc.text("รายงานทะเบียนอุปกรณ์ IT ทั้งหมด", 14, 15);
+      doc.setFontSize(10); doc.text(`ข้อมูล ณ วันที่: ${new Date().toLocaleDateString('th-TH')}`, 14, 22);
       autoTable(doc, {
         styles: { font: font ? 'Sarabun' : 'helvetica', fontSize: 10 },
-        headStyles: { 
-          fillColor: [15, 23, 42],
-          font: font ? 'Sarabun' : 'helvetica',
-          fontStyle: 'bold'
-        },
-        bodyStyles: {
-          font: font ? 'Sarabun' : 'helvetica'
-        },
-        head: [tableColumn],
-        body: tableRows,
-        startY: 28,
-        theme: 'grid'
+        headStyles: { fillColor: [15, 23, 42], font: font ? 'Sarabun' : 'helvetica', fontStyle: 'bold' },
+        bodyStyles: { font: font ? 'Sarabun' : 'helvetica' },
+        head: [["รหัสอุปกรณ์", "ชื่ออุปกรณ์", "หมวดหมู่", "สถานะ"]],
+        body: filteredDevices.map(item => [String(item.id || '-'), String(item.name || '-'), String(item.category || '-'), String(item.status || '-')]),
+        startY: 28, theme: 'grid'
       });
-
       doc.save(`รายงานอุปกรณ์_IT_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('ส่งออกไฟล์ PDF เรียบร้อยแล้ว');
-    } catch (err) {
-      console.error('PDF Export Error:', err);
-      toast.error('เกิดข้อผิดพลาดในการส่งออก PDF');
-    }
+    } catch (err) { console.error('PDF Export Error:', err); toast.error('เกิดข้อผิดพลาดในการส่งออก PDF'); }
   };
 
-  // Export ประวัติการยืมคืนเป็น Excel
-  const exportTransactionsToExcel = () => {
+  const exportTransactionsToExcel = async () => {
     try {
+      toast.info('กำลังเตรียมส่งออกไฟล์ Excel...');
+      const XLSX = await import('xlsx');
       const formattedData = transactions.map(item => ({
-        "รหัสธุรกรรม": item.id || '-',
-        "รหัสอุปกรณ์": item.deviceId || '-',
-        "ชื่ออุปกรณ์": item.deviceName || '-',
-        "ผู้ยืม": item.username || '-',
-        "วันที่ยืม": formatDate(item.borrowDate),
-        "กำหนดคืน": formatDate(item.expectedReturnDate),
+        "รหัสธุรกรรม": item.id || '-', "รหัสอุปกรณ์": item.deviceId || '-',
+        "ชื่ออุปกรณ์": item.deviceName || '-', "ผู้ยืม": item.username || '-',
+        "วันที่ยืม": formatDate(item.borrowDate), "กำหนดคืน": formatDate(item.expectedReturnDate),
         "วันที่คืนจริง": formatDate(item.returnDate),
         "สถานะ": ['returned', 'คืนแล้ว'].includes(item.status) ? 'คืนแล้ว' : (checkIsOverdue(item) ? 'เกินกำหนดคืน' : 'กำลังยืม')
       }));
-
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
       XLSX.writeFile(workbook, `รายงานการยืมคืน_${new Date().toISOString().split('T')[0]}.xlsx`);
       toast.success('ส่งออกไฟล์ Excel ประวัติการยืม-คืนเรียบร้อยแล้ว');
-    } catch {
-      toast.error('เกิดข้อผิดพลาดในการส่งออก Excel');
-    }
+    } catch (err) { console.error(err); toast.error('เกิดข้อผิดพลาดในการส่งออก Excel'); }
   };
 
-  // Export ประวัติการยืมคืนเป็น PDF (รองรับภาษาไทย)
   const exportTransactionsToPDF = async () => {
     try {
+      toast.info('กำลังประมวลผลเอกสาร PDF...');
+      const [{ default: jsPDF }, { default: autoTable }, font] = await Promise.all([import('jspdf'), import('jspdf-autotable'), loadSarabunFont()]);
       const doc = new jsPDF();
-      const font = await loadSarabunFont();
-      if (font) {
-        doc.addFileToVFS('Sarabun-Regular.ttf', font);
-        doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
-        doc.setFont('Sarabun');
-      }
-
-      doc.setFontSize(16);
-      doc.text("รายงานประวัติการยืม-คืน อุปกรณ์ IT", 14, 15);
-      doc.setFontSize(10);
-      doc.text(`ข้อมูล ณ วันที่: ${new Date().toLocaleDateString('th-TH')}`, 14, 22);
-
-      const tableColumn = ["รหัสธุรกรรม", "ชื่ออุปกรณ์", "ผู้ยืม", "วันที่ยืม", "กำหนดคืน", "สถานะ"];
-      const tableRows = transactions.map(item => [
-        String(item.id || '-'),
-        String(item.deviceName || '-'),
-        String(item.username || '-'),
-        formatDate(item.borrowDate),
-        formatDate(item.expectedReturnDate),
-        ['returned', 'คืนแล้ว'].includes(item.status) ? 'คืนแล้ว' : (checkIsOverdue(item) ? 'เกินกำหนดคืน' : 'กำลังยืม')
-      ]);
-
+      if (font) { doc.addFileToVFS('Sarabun-Regular.ttf', font); doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal'); doc.setFont('Sarabun'); }
+      doc.setFontSize(16); doc.text("รายงานประวัติการยืม-คืน อุปกรณ์ IT", 14, 15);
+      doc.setFontSize(10); doc.text(`ข้อมูล ณ วันที่: ${new Date().toLocaleDateString('th-TH')}`, 14, 22);
       autoTable(doc, {
         styles: { font: font ? 'Sarabun' : 'helvetica', fontSize: 9 },
-        headStyles: { 
-          fillColor: [15, 23, 42],
-          font: font ? 'Sarabun' : 'helvetica',
-          fontStyle: 'bold'
-        },
-        bodyStyles: {
-          font: font ? 'Sarabun' : 'helvetica'
-        },
-        head: [tableColumn],
-        body: tableRows,
-        startY: 28,
-        theme: 'grid'
+        headStyles: { fillColor: [15, 23, 42], font: font ? 'Sarabun' : 'helvetica', fontStyle: 'bold' },
+        bodyStyles: { font: font ? 'Sarabun' : 'helvetica' },
+        head: [["รหัสธุรกรรม", "ชื่ออุปกรณ์", "ผู้ยืม", "วันที่ยืม", "กำหนดคืน", "สถานะ"]],
+        body: transactions.map(item => [
+          String(item.id || '-'), String(item.deviceName || '-'), String(item.username || '-'),
+          formatDate(item.borrowDate), formatDate(item.expectedReturnDate),
+          ['returned', 'คืนแล้ว'].includes(item.status) ? 'คืนแล้ว' : (checkIsOverdue(item) ? 'เกินกำหนดคืน' : 'กำลังยืม')
+        ]),
+        startY: 28, theme: 'grid'
       });
-
       doc.save(`รายงานประวัติการยืมคืน_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('ส่งออกไฟล์ PDF ประวัติการยืม-คืนเรียบร้อยแล้ว');
-    } catch (err) {
-      console.error('PDF Export Error:', err);
-      toast.error('เกิดข้อผิดพลาดในการส่งออก PDF');
-    }
+    } catch (err) { console.error('PDF Export Error:', err); toast.error('เกิดข้อผิดพลาดในการส่งออก PDF'); }
   };
 
+  // ─── Tab definitions ─────────────────────────────────────────────
+  const tabs = [
+    { key: 'devices', label: 'ทะเบียนอุปกรณ์', count: devices.length, icon: Laptop, color: 'text-indigo-400' },
+    { key: 'borrowed', label: 'อยู่ระหว่างยืม', count: borrowedTransactions.length, icon: Clock, color: 'text-amber-400' },
+    { key: 'transactions', label: 'ประวัติการยืม-คืน', count: transactions.length, icon: History, color: 'text-slate-400' }
+  ];
+
+  // ─── Shared input class ──────────────────────────────────────────
+  const inputCls = "dark-input w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium";
+
   return (
-    <div className="min-h-screen bg-slate-50/70 text-slate-800 p-4 sm:p-6 lg:p-8 font-sans selection:bg-indigo-500 selection:text-white">
-      
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Clean Header Bar */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 sm:p-6 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
+    <div className="min-h-screen bg-animated text-slate-200 font-sans selection:bg-indigo-500 selection:text-white">
+
+      {/* Ambient background orbs */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[-5%] right-[-5%] w-[500px] h-[500px] rounded-full opacity-8 animate-orb-1"
+          style={{ background: 'radial-gradient(circle, #4f46e5 0%, transparent 70%)' }} />
+        <div className="absolute bottom-[5%] left-[-5%] w-[400px] h-[400px] rounded-full opacity-6 animate-orb-2"
+          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)' }} />
+      </div>
+
+      {/* ─── Header ───────────────────────────────────────────────── */}
+      <header className="relative z-20 sticky top-0"
+        style={{ background: 'rgba(11, 15, 25, 0.90)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(99,102,241,0.18)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl overflow-hidden border border-slate-200/80 shadow-xs bg-slate-50 shrink-0 ring-2 ring-indigo-50">
+            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-500/30 shadow-lg shadow-indigo-500/20">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover object-top" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                  IT Asset Console
-                </h1>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">ระบบจัดการและติดตามอุปกรณ์ไอทีสำหรับผู้ดูแลระบบ</p>
+              <h1 className="text-base sm:text-lg font-black tracking-tight gradient-text">IT Asset Console</h1>
+              <p className="text-[11px] text-slate-500">ระบบจัดการอุปกรณ์ไอทีสำหรับผู้ดูแลระบบ</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setIsProfileOpen(true)}
-              className="bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all duration-150 cursor-pointer group shadow-2xs active:scale-98"
-              title="คลิกเพื่อแก้ไขข้อมูลโปรไฟล์และเปลี่ยนรหัสผ่าน"
-            >
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 shrink-0 ring-1 ring-indigo-400/20 bg-indigo-50 flex items-center justify-center">
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-3 sm:pt-0"
+            style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+
+            {loading && (
+              <div className="flex items-center gap-2 text-xs text-indigo-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span className="hidden sm:inline">กำลังโหลด...</span>
+              </div>
+            )}
+
+            {/* Profile */}
+            <button type="button" onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer group"
+              style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+              <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-amber-500/40 shrink-0 flex items-center justify-center bg-amber-900/30">
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt="Admin" className="w-full h-full object-cover" />
                 ) : (
-                  <img src="/logo.png" alt="Admin" className="w-full h-full object-cover object-top" />
+                  <User className="w-4 h-4 text-amber-300" />
                 )}
               </div>
-              <span className="text-slate-800 group-hover:text-indigo-600 transition-colors">
-                {user?.name || user?.username || 'ผู้ดูแลระบบ'}
-              </span>
-              <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] uppercase px-2 py-0.5 rounded-full font-bold">
+              <div className="text-xs text-left hidden sm:block">
+                <div className="font-bold text-slate-200 group-hover:text-amber-300 transition-colors">
+                  {user?.name || user?.username || 'ผู้ดูแลระบบ'}
+                </div>
+                <div className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Administrator</div>
+              </div>
+              <span className="hidden sm:inline text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider"
+                style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)' }}>
                 Admin
               </span>
-              <span className="text-[11px] text-slate-400 group-hover:text-indigo-600 transition-colors">
-                ⚙️ โปรไฟล์
-              </span>
             </button>
 
-            <button
-              type="button"
-              onClick={onLogout}
-              className="bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 px-3.5 py-2 rounded-xl font-bold text-xs transition-all duration-150 shadow-xs flex items-center gap-1.5 cursor-pointer"
-            >
+            <button type="button" onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-400 hover:text-rose-300"
+              style={{ background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.15)' }}>
               <LogOut className="w-3.5 h-3.5" />
-              <span>ออกจากระบบ</span>
+              <span className="hidden sm:inline">ออกจากระบบ</span>
             </button>
-          </div>
-        </header>
-
-        {/* Top Summary Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-          
-          {/* Card 1: Total */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">อุปกรณ์ทั้งหมด</span>
-              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
-                <Boxes className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 tracking-tight">{devices.length}</p>
-            <span className="text-[11px] text-slate-400 mt-1 block">ลงทะเบียนในคลัง IT</span>
-          </div>
-
-          {/* Card 2: Ready */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">พร้อมใช้งาน</span>
-              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
-                <PackageCheck className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2 tracking-tight">
-              {devices.filter(d => d.status === 'พร้อมใช้งาน').length}
-            </p>
-            <span className="text-[11px] text-slate-400 mt-1 block">สามารถยืมได้ทันที</span>
-          </div>
-
-          {/* Card 3: Borrowed */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">กำลังถูกยืม</span>
-              <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-2 tracking-tight">{borrowedTransactions.length}</p>
-            <span className="text-[11px] text-slate-400 mt-1 block">อยู่ระหว่างการใช้งาน</span>
-          </div>
-
-          {/* Card 4: Overdue */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">เกินกำหนดคืน</span>
-              <div className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-rose-600 mt-2 tracking-tight">{overdueCount}</p>
-            <span className="text-[11px] text-slate-400 mt-1 block">ต้องติดตามการส่งคืน</span>
           </div>
         </div>
+      </header>
 
-        {/* Navigation Tabs (Modern Segmented Bar) */}
-        <div className="flex gap-1.5 p-1.5 bg-slate-200/70 border border-slate-200/80 rounded-2xl overflow-x-auto">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+        {/* ─── Stat Cards ──────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           {[
-            { key: 'devices', label: 'ทะเบียนอุปกรณ์', count: devices.length, icon: Laptop },
-            { key: 'borrowed', label: 'อยู่ระหว่างการยืม', count: borrowedTransactions.length, icon: Clock },
-            { key: 'transactions', label: 'ประวัติการยืม-คืน', count: transactions.length, icon: History }
-          ].map(tab => {
+            { label: 'อุปกรณ์ทั้งหมด', value: devices.length, sub: 'ลงทะเบียนในคลัง', icon: Boxes, bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.2)', color: 'text-indigo-400', glow: 'animate-glow' },
+            { label: 'พร้อมใช้งาน', value: devices.filter(d => d.status === 'พร้อมใช้งาน').length, sub: 'ยืมได้ทันที', icon: PackageCheck, bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', color: 'text-emerald-400', glow: 'animate-glow-emerald' },
+            { label: 'กำลังถูกยืม', value: borrowedTransactions.length, sub: 'อยู่ระหว่างใช้งาน', icon: Clock, bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)', color: 'text-amber-400', glow: 'animate-glow-amber' },
+            { label: 'เกินกำหนดคืน', value: overdueCount, sub: 'ต้องติดตาม', icon: AlertTriangle, bg: 'rgba(244,63,94,0.1)', border: 'rgba(244,63,94,0.2)', color: 'text-rose-400', glow: overdueCount > 0 ? 'animate-glow-rose' : '' }
+          ].map((card, i) => {
+            const Icon = card.icon;
+            return (
+              <div key={i} className="glass-card rounded-2xl p-5 animate-fade-up"
+                style={{ animationDelay: `${i * 0.08}s`, borderColor: card.border }}>
+                <div className="flex items-start justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{card.label}</span>
+                  <div className={`p-2 rounded-xl ${card.glow}`} style={{ background: card.bg, border: `1px solid ${card.border}` }}>
+                    <Icon className={`w-4 h-4 ${card.color}`} />
+                  </div>
+                </div>
+                <p className={`text-3xl font-black mt-2 tracking-tight ${card.color}`}>{card.value}</p>
+                <span className="text-[11px] text-slate-600 mt-1 block">{card.sub}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ─── Tabs ────────────────────────────────────────────────── */}
+        <div className="flex gap-1.5 p-1.5 rounded-2xl overflow-x-auto animate-fade-up"
+          style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isActive ? 'text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
                 }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                style={isActive
+                  ? { background: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.2))', border: '1px solid rgba(99,102,241,0.3)' }
+                  : {}}>
+                <Icon className={`w-4 h-4 ${isActive ? tab.color : 'text-slate-600'}`} />
                 <span>{tab.label}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  isActive ? 'bg-slate-100 text-slate-800' : 'bg-slate-200/80 text-slate-500'
-                }`}>
+                  isActive ? 'text-slate-200' : 'text-slate-600'
+                }`} style={isActive ? { background: 'rgba(255,255,255,0.1)' } : { background: 'rgba(255,255,255,0.04)' }}>
                   {tab.count}
                 </span>
               </button>
@@ -558,264 +415,179 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
           })}
         </div>
 
-        {/* TAB 1: ALL DEVICES */}
+        {/* ─── TAB 1: DEVICES ──────────────────────────────────────── */}
         {activeTab === 'devices' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* Form Add Device Card */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
-                    <Plus className="w-4 h-4" />
+          <div className="space-y-5 animate-fade-up">
+
+            {/* Add Device Form */}
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-xl" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                    <Plus className="w-4 h-4 text-indigo-400" />
                   </div>
-                  <span>เพิ่มอุปกรณ์ใหม่เข้าสู่ระบบ</span>
+                  เพิ่มอุปกรณ์ใหม่เข้าสู่ระบบ
                 </h2>
-                <span className="text-[11px] text-slate-400">บันทึกเข้า Google Sheets อัตโนมัติ</span>
+                <span className="text-[11px] text-slate-600">บันทึกเข้า Google Sheets อัตโนมัติ</span>
               </div>
 
               <form onSubmit={handleAddDevice} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5">
                 <div className="lg:col-span-4">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    ชื่ออุปกรณ์
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="เช่น MacBook Pro 14 M3, iPad Air 5"
-                    value={newDevice.name}
-                    onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium"
-                    required
-                  />
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">ชื่ออุปกรณ์</label>
+                  <input type="text" placeholder="เช่น MacBook Pro 14, iPad Air 5" value={newDevice.name}
+                    onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })} className={inputCls} required />
                 </div>
-
                 <div className="lg:col-span-3">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    หมวดหมู่อุปกรณ์ (IT / Computer)
-                  </label>
-                  <select
-                    value={newDevice.category}
-                    onChange={(e) => setNewDevice({ ...newDevice, category: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium cursor-pointer"
-                  >
-                    {IT_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">หมวดหมู่</label>
+                  <select value={newDevice.category} onChange={(e) => setNewDevice({ ...newDevice, category: e.target.value })}
+                    className={`${inputCls} cursor-pointer appearance-none`}>
+                    {IT_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
-
                 <div className="lg:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    สถานะแรกเริ่ม
-                  </label>
-                  <select
-                    value={newDevice.status}
-                    onChange={(e) => setNewDevice({ ...newDevice, status: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium cursor-pointer"
-                  >
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">สถานะแรกเริ่ม</label>
+                  <select value={newDevice.status} onChange={(e) => setNewDevice({ ...newDevice, status: e.target.value })}
+                    className={`${inputCls} cursor-pointer appearance-none`}>
                     <option value="พร้อมใช้งาน">พร้อมใช้งาน</option>
                     <option value="ชำรุด">ชำรุด</option>
                   </select>
                 </div>
-
-                <div className="lg:col-span-3">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                    URL รูปภาพ (ถ้ามี)
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={newDevice.imageUrl}
-                    onChange={(e) => setNewDevice({ ...newDevice, imageUrl: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium"
-                  />
+                <div className="lg:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">URL รูปภาพ</label>
+                  <input type="url" placeholder="https://..." value={newDevice.imageUrl}
+                    onChange={(e) => setNewDevice({ ...newDevice, imageUrl: e.target.value })} className={inputCls} />
                 </div>
-
                 <div className="lg:col-span-1 flex items-end">
-                  <button
-                    type="submit"
-                    disabled={actionLoading || loading}
-                    className="w-full h-[42px] bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl transition duration-150 disabled:opacity-50 shadow-sm shadow-indigo-600/20 flex items-center justify-center gap-1 text-xs sm:text-sm cursor-pointer"
-                  >
+                  <button type="submit" disabled={actionLoading || loading}
+                    className="w-full h-[42px] rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 btn-gradient-primary">
                     {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    <span>บันทึก</span>
+                    <span>เพิ่ม</span>
                   </button>
                 </div>
               </form>
             </div>
 
-            {/* Devices Table Card */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-              
-              {/* Header Actions */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <Boxes className="w-5 h-5 text-indigo-600" />
-                    <span>ทะเบียนอุปกรณ์ทั้งหมด</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-normal">
-                      {filteredDevices.length} ชิ้น
-                    </span>
-                  </h2>
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={exportDevicesToExcel}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all duration-150 cursor-pointer shadow-xs"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                    <span>Excel</span>
+            {/* Devices Table */}
+            <div className="glass-card rounded-2xl p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+                <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2.5">
+                  <Boxes className="w-5 h-5 text-indigo-400" />
+                  ทะเบียนอุปกรณ์ทั้งหมด
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-normal text-slate-400"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {filteredDevices.length} ชิ้น
+                  </span>
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={exportDevicesToExcel}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer text-emerald-400 hover:text-emerald-200"
+                    style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <FileSpreadsheet className="w-3.5 h-3.5" /><span>Excel</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={exportDevicesToPDF}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all duration-150 cursor-pointer shadow-xs"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>PDF</span>
+                  <button onClick={exportDevicesToPDF}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer text-rose-400 hover:text-rose-200"
+                    style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)' }}>
+                    <FileText className="w-3.5 h-3.5" /><span>PDF</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => fetchData(true)}
-                    disabled={loading}
-                    className="flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all duration-150 cursor-pointer disabled:opacity-50 shadow-xs"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
+                  <button onClick={() => fetchData(true)} disabled={loading}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer text-slate-400 hover:text-slate-200 disabled:opacity-50"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
                     <span>รีเฟรช</span>
                   </button>
                 </div>
               </div>
 
               {/* Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Search className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="ค้นหาชื่ออุปกรณ์หรือรหัสไอดี..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium"
-                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <input type="text" placeholder="ค้นหาชื่อหรือรหัสอุปกรณ์..." value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)} className={`dark-input w-full pl-9 pr-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium`} />
                 </div>
-
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Filter className="w-4 h-4" />
-                  </div>
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium cursor-pointer"
-                  >
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="dark-input w-full pl-9 pr-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium cursor-pointer appearance-none">
                     <option value="ทั้งหมด">หมวดหมู่ทั้งหมด</option>
-                    {allAvailableCategories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                    {allAvailableCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
-
-                <div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-600 transition-all font-medium cursor-pointer"
-                  >
-                    <option value="ทั้งหมด">สถานะทั้งหมด</option>
-                    <option value="พร้อมใช้งาน">พร้อมใช้งาน</option>
-                    <option value="ถูกยืม">ถูกยืม</option>
-                    <option value="ชำรุด">ชำรุด</option>
-                  </select>
-                </div>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+                  className="dark-input w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium cursor-pointer appearance-none">
+                  <option value="ทั้งหมด">สถานะทั้งหมด</option>
+                  <option value="พร้อมใช้งาน">พร้อมใช้งาน</option>
+                  <option value="ถูกยืม">ถูกยืม</option>
+                  <option value="ชำรุด">ชำรุด</option>
+                </select>
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                <table className="w-full text-left text-xs sm:text-sm text-slate-600">
-                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[11px] tracking-wider border-b border-slate-200">
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                <table className="w-full text-xs sm:text-sm dark-table">
+                  <thead>
                     <tr>
-                      <th className="p-4">รูปภาพ</th>
-                      <th className="p-4">รหัส (ID)</th>
-                      <th className="p-4">ชื่ออุปกรณ์</th>
-                      <th className="p-4">หมวดหมู่</th>
-                      <th className="p-4">สถานะ</th>
-                      <th className="p-4 text-right">การจัดการ</th>
+                      {['รูปภาพ','รหัส (ID)','ชื่ออุปกรณ์','หมวดหมู่','สถานะ','การจัดการ'].map((h, i) => (
+                        <th key={i} className={`p-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest ${i === 5 ? 'text-right' : ''}`}>{h}</th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody>
                     {loading && filteredDevices.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="text-center py-12 text-slate-400">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                        <td colSpan="6" className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2 text-slate-600">
+                            <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
                             <span className="text-xs font-medium">กำลังโหลดข้อมูลอุปกรณ์...</span>
                           </div>
                         </td>
                       </tr>
                     ) : filteredDevices.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="text-center py-12 text-slate-400">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Boxes className="w-8 h-8 text-slate-300" />
-                            <p className="text-sm font-semibold text-slate-700">ไม่พบข้อมูลอุปกรณ์ที่ตรงกับเงื่อนไข</p>
-                            <span className="text-xs text-slate-400">ลองปรับเปลี่ยนคำค้นหาหรือตัวกรองด้านบน</span>
+                        <td colSpan="6" className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2">
+                            <Boxes className="w-8 h-8 text-slate-700" />
+                            <p className="text-sm font-semibold text-slate-500">ไม่พบข้อมูลอุปกรณ์ที่ตรงกับเงื่อนไข</p>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       filteredDevices.map(d => (
-                        <tr key={d.id} className="hover:bg-slate-50/70 transition duration-150">
+                        <tr key={d.id}>
                           <td className="p-4">
-                            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden">
+                            <div className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
                               {d.imageUrl ? (
-                                <img
-                                  src={d.imageUrl}
-                                  alt={d.name}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = "https://via.placeholder.com/50?text=IT";
-                                  }}
-                                />
-                              ) : (
-                                <ImageOff className="w-4 h-4 text-slate-400" />
-                              )}
+                                <img src={d.imageUrl} alt={d.name} className="w-full h-full object-cover"
+                                  onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/50?text=IT"; }} />
+                              ) : (<ImageOff className="w-4 h-4 text-slate-600" />)}
                             </div>
                           </td>
-                          <td className="p-4 font-mono text-xs text-slate-500 font-semibold">{d.id}</td>
-                          <td className="p-4 font-bold text-slate-900 leading-snug">{d.name}</td>
+                          <td className="p-4 font-mono text-xs text-slate-600 font-semibold">{d.id}</td>
+                          <td className="p-4 font-bold text-slate-200">{d.name}</td>
                           <td className="p-4">
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-400"
+                              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                               {d.category}
                             </span>
                           </td>
                           <td className="p-4">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                              d.status === 'พร้อมใช้งาน' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' :
-                              d.status === 'ถูกยืม' ? 'bg-amber-50 text-amber-700 border border-amber-200/80' :
-                              'bg-rose-50 text-rose-700 border border-rose-200/80'
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                              d.status === 'พร้อมใช้งาน' ? 'status-available' :
+                              d.status === 'ถูกยืม' ? 'status-borrowed' : 'status-broken'
                             }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${
-                                d.status === 'พร้อมใช้งาน' ? 'bg-emerald-500' :
-                                d.status === 'ถูกยืม' ? 'bg-amber-500' : 'bg-rose-500'
-                              }`}></span>
+                                d.status === 'พร้อมใช้งาน' ? 'bg-emerald-400' :
+                                d.status === 'ถูกยืม' ? 'bg-amber-400' : 'bg-rose-400'
+                              }`} />
                               {d.status}
                             </span>
                           </td>
                           <td className="p-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => promptDeleteDevice(d.id, d.name)}
-                              disabled={actionLoading}
-                              className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white px-3 py-1.5 rounded-xl transition duration-150 text-xs font-semibold border border-rose-200 active:scale-95 cursor-pointer disabled:opacity-50"
-                              title="ลบอุปกรณ์ออกจากระบบ"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>ลบ</span>
+                            <button type="button" onClick={() => promptDeleteDevice(d.id, d.name)} disabled={actionLoading}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 text-rose-400 hover:text-rose-200"
+                              style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)' }}>
+                              <Trash2 className="w-3.5 h-3.5" /><span>ลบ</span>
                             </button>
                           </td>
                         </tr>
@@ -825,55 +597,46 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
                 </table>
               </div>
             </div>
-
           </div>
         )}
 
-        {/* TAB 2: BORROWED DEVICES */}
+        {/* ─── TAB 2: BORROWED ─────────────────────────────────────── */}
         {activeTab === 'borrowed' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs animate-in fade-in duration-200">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                  <span>รายการอุปกรณ์ที่อยู่ระหว่างการยืม</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-normal">
-                    {borrowedTransactions.length} รายการ
-                  </span>
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => fetchData(true)}
-                disabled={loading}
-                className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer shadow-xs"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-600' : ''}`} />
+          <div className="glass-card rounded-2xl p-6 animate-fade-up">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+              <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2.5">
+                <Clock className="w-5 h-5 text-amber-400" />
+                รายการอุปกรณ์ที่อยู่ระหว่างการยืม
+                <span className="text-xs px-2.5 py-0.5 rounded-full text-slate-400 font-normal"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {borrowedTransactions.length} รายการ
+                </span>
+              </h2>
+              <button onClick={() => fetchData(true)} disabled={loading}
+                className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer text-slate-400 hover:text-slate-200 disabled:opacity-50"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : ''}`} />
                 <span>รีเฟรช</span>
               </button>
             </div>
-            
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-              <table className="w-full text-left text-xs sm:text-sm text-slate-600">
-                <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[11px] tracking-wider border-b border-slate-200">
+
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <table className="w-full text-xs sm:text-sm dark-table">
+                <thead>
                   <tr>
-                    <th className="p-4">ชื่ออุปกรณ์</th>
-                    <th className="p-4">ผู้ยืม</th>
-                    <th className="p-4">วันที่ยืม</th>
-                    <th className="p-4">กำหนดคืน</th>
-                    <th className="p-4">สถานะ</th>
-                    <th className="p-4 text-right">การจัดการ</th>
+                    {['ชื่ออุปกรณ์','ผู้ยืม','วันที่ยืม','กำหนดคืน','สถานะ','การจัดการ'].map((h, i) => (
+                      <th key={i} className={`p-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest ${i === 5 ? 'text-right' : ''}`}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody>
                   {borrowedTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-12 text-slate-400">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                          <p className="text-sm font-semibold text-slate-700">ไม่มีรายการอุปกรณ์ที่ค้างยืมในขณะนี้</p>
-                          <span className="text-xs text-slate-400">อุปกรณ์ทั้งหมดถูกส่งคืนครบถ้วน</span>
+                      <td colSpan="6" className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500/40" />
+                          <p className="text-sm font-semibold text-slate-500">ไม่มีรายการอุปกรณ์ที่ค้างยืมในขณะนี้</p>
+                          <span className="text-xs text-slate-600">อุปกรณ์ทั้งหมดถูกส่งคืนครบถ้วน</span>
                         </div>
                       </td>
                     </tr>
@@ -881,128 +644,107 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
                     borrowedTransactions.map(t => {
                       const isOverdue = checkIsOverdue(t);
                       return (
-                        <tr key={t.id} className={`hover:bg-slate-50/70 transition duration-150 ${isOverdue ? 'bg-rose-50/30' : ''}`}>
-                          <td className="p-4 font-bold text-slate-900">{t.deviceName}</td>
-                          <td className="p-4 text-slate-700 font-medium">{t.username}</td>
-                          <td className="p-4 text-slate-500 font-mono text-xs">{formatDate(t.borrowDate)}</td>
-                          <td className="p-4 font-mono text-xs font-semibold">
-                            <span className={isOverdue ? 'text-rose-600' : 'text-slate-700'}>
-                              {formatDate(t.expectedReturnDate)}
-                            </span>
+                        <tr key={t.id} style={isOverdue ? { background: 'rgba(244,63,94,0.04)' } : {}}>
+                          <td className="p-4 font-bold text-slate-200">{t.deviceName}</td>
+                          <td className="p-4 text-slate-400 font-medium">{t.username}</td>
+                          <td className="p-4 text-slate-600 font-mono text-xs">{formatDate(t.borrowDate)}</td>
+                          <td className="p-4 font-mono text-xs">
+                            <span className={isOverdue ? 'text-rose-400 font-bold' : 'text-slate-400'}>{formatDate(t.expectedReturnDate)}</span>
                           </td>
                           <td className="p-4">
                             {isOverdue ? (
-                              <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200/80 px-3 py-1 rounded-full text-xs font-semibold">
-                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                                เกินกำหนดคืน
+                              <span className="status-overdue inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold">
+                                <AlertTriangle className="w-3.5 h-3.5" />เกินกำหนดคืน
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200/80 px-3 py-1 rounded-full text-xs font-semibold">
-                                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                กำลังยืม
+                              <span className="status-borrowed inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold">
+                                <Clock className="w-3.5 h-3.5" />กำลังยืม
                               </span>
                             )}
                           </td>
-                        <td className="p-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => promptReturnDevice(t)}
-                            disabled={actionLoading}
-                            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition duration-150 shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
-                          >
-                            <Undo2 className="w-3.5 h-3.5" />
-                            <span>บันทึกรับคืน</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                          <td className="p-4 text-right">
+                            <button type="button" onClick={() => promptReturnDevice(t)} disabled={actionLoading}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 btn-gradient-emerald">
+                              <Undo2 className="w-3.5 h-3.5" /><span>บันทึกรับคืน</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         )}
 
-        {/* TAB 3: ALL TRANSACTIONS */}
+        {/* ─── TAB 3: TRANSACTIONS ─────────────────────────────────── */}
         {activeTab === 'transactions' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs animate-in fade-in duration-200">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <History className="w-5 h-5 text-indigo-600" />
-                  <span>ประวัติการยืม-คืน ทั้งหมด</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-normal">
-                    {transactions.length} รายการ
-                  </span>
-                </h2>
-              </div>
-              
+          <div className="glass-card rounded-2xl p-6 animate-fade-up">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+              <h2 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2.5">
+                <History className="w-5 h-5 text-indigo-400" />
+                ประวัติการยืม-คืน ทั้งหมด
+                <span className="text-xs px-2.5 py-0.5 rounded-full text-slate-400 font-normal"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {transactions.length} รายการ
+                </span>
+              </h2>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={exportTransactionsToExcel}
-                  className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all duration-150 cursor-pointer shadow-xs"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Excel</span>
+                <button onClick={exportTransactionsToExcel}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer text-emerald-400 hover:text-emerald-200"
+                  style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <FileSpreadsheet className="w-3.5 h-3.5" /><span>Excel</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={exportTransactionsToPDF}
-                  className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all duration-150 cursor-pointer shadow-xs"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>PDF</span>
+                <button onClick={exportTransactionsToPDF}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer text-rose-400 hover:text-rose-200"
+                  style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)' }}>
+                  <FileText className="w-3.5 h-3.5" /><span>PDF</span>
                 </button>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-              <table className="w-full text-left text-xs sm:text-sm text-slate-600">
-                <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[11px] tracking-wider border-b border-slate-200">
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <table className="w-full text-xs sm:text-sm dark-table">
+                <thead>
                   <tr>
-                    <th className="p-4">ชื่ออุปกรณ์</th>
-                    <th className="p-4">ผู้ยืม</th>
-                    <th className="p-4">วันที่ยืม</th>
-                    <th className="p-4">กำหนดคืน</th>
-                    <th className="p-4">สถานะ</th>
+                    {['ชื่ออุปกรณ์','ผู้ยืม','วันที่ยืม','กำหนดคืน','สถานะ'].map((h, i) => (
+                      <th key={i} className="p-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest">{h}</th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody>
                   {transactions.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-12 text-slate-400">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <History className="w-8 h-8 text-slate-300" />
-                          <p className="text-sm font-semibold text-slate-700">ยังไม่พบประวัติการทำรายการยืม-คืน</p>
+                      <td colSpan="5" className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2">
+                          <History className="w-8 h-8 text-slate-700" />
+                          <p className="text-sm font-semibold text-slate-500">ยังไม่พบประวัติการทำรายการยืม-คืน</p>
                         </div>
                       </td>
                     </tr>
                   ) : (
                     transactions.map(t => {
                       const isOverdue = checkIsOverdue(t);
+                      const isReturned = ['returned', 'คืนแล้ว'].includes(t.status);
                       return (
-                        <tr key={t.id} className="hover:bg-slate-50/70 transition duration-150">
-                          <td className="p-4 font-bold text-slate-900">{t.deviceName}</td>
-                          <td className="p-4 text-slate-700 font-medium">{t.username}</td>
-                          <td className="p-4 text-slate-500 font-mono text-xs">{formatDate(t.borrowDate)}</td>
-                          <td className="p-4 text-slate-500 font-mono text-xs">{formatDate(t.expectedReturnDate)}</td>
+                        <tr key={t.id}>
+                          <td className="p-4 font-bold text-slate-200">{t.deviceName}</td>
+                          <td className="p-4 text-slate-400 font-medium">{t.username}</td>
+                          <td className="p-4 text-slate-600 font-mono text-xs">{formatDate(t.borrowDate)}</td>
+                          <td className="p-4 text-slate-600 font-mono text-xs">{formatDate(t.expectedReturnDate)}</td>
                           <td className="p-4">
-                            {['returned', 'คืนแล้ว'].includes(t.status) ? (
-                              <span className="text-emerald-700 bg-emerald-50 border border-emerald-200/80 font-semibold inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                คืนแล้ว
+                            {isReturned ? (
+                              <span className="status-available inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                                <CheckCircle2 className="w-3.5 h-3.5" />คืนแล้ว
                               </span>
                             ) : isOverdue ? (
-                              <span className="text-rose-700 bg-rose-50 border border-rose-200/80 font-semibold inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full">
-                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                                เกินกำหนดคืน
+                              <span className="status-overdue inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                                <AlertTriangle className="w-3.5 h-3.5" />เกินกำหนดคืน
                               </span>
                             ) : (
-                              <span className="text-amber-700 bg-amber-50 border border-amber-200/80 font-semibold inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full">
-                                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                กำลังยืม
+                              <span className="status-borrowed inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                                <Clock className="w-3.5 h-3.5" />กำลังยืม
                               </span>
                             )}
                           </td>
@@ -1016,44 +758,39 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
           </div>
         )}
 
-        {/* Branded Footer */}
-        <footer className="pt-8 pb-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl overflow-hidden shadow-xs border border-slate-200 shrink-0">
+        {/* Footer */}
+        <footer className="pt-4 pb-2 flex items-center justify-between gap-4 text-xs text-slate-600"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl overflow-hidden border border-indigo-500/20">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover object-top" />
             </div>
-            <div>
-              <p className="font-bold text-slate-700">IT Asset Console (Administrator System)</p>
-              <p className="text-[11px] text-slate-400">ระบบติดตามและบริหารจัดการครุภัณฑ์ไอที</p>
-            </div>
+            <span className="gradient-text-gold font-bold text-sm">IT Asset Console — Administrator</span>
           </div>
-          <div className="text-center sm:text-right text-[11px] text-slate-400">
-            © 2026 All Rights Reserved • IT Asset System
-          </div>
+          <span className="text-[11px]">© 2026 IT Asset System</span>
         </footer>
-
-        {/* Confirm Modal Dialog สำหรับยืนยันการลบและรับคืนอุปกรณ์ */}
-        <ConfirmModal
-          isOpen={confirmState.isOpen}
-          title={confirmState.title}
-          message={confirmState.message}
-          confirmText={confirmState.confirmText}
-          variant={confirmState.variant}
-          loading={actionLoading}
-          onConfirm={confirmState.onConfirm}
-          onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
-        />
-
-        {/* Profile & Security Modal สำหรับ Admin */}
-        <ProfileModal
-          isOpen={isProfileOpen}
-          onClose={() => setIsProfileOpen(false)}
-          user={user}
-          onUpdateUser={onUpdateUser}
-          apiUrl={APPS_SCRIPT_URL}
-        />
-
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        variant={confirmState.variant}
+        loading={actionLoading}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        onUpdateUser={onUpdateUser}
+        apiUrl={APPS_SCRIPT_URL}
+      />
     </div>
   );
 }

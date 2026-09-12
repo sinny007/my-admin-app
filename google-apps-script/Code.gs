@@ -37,9 +37,20 @@ const SHEET_DEVICES      = 'Devices';
 const SHEET_TRANSACTIONS = 'Transactions';
 const SHEET_BORROW       = 'BorrowRecords';
 
+// ─── Helper: แคชและเปิด Spreadsheet (เร่งความเร็วประมวลผล) ──────────────
+let _cachedSS = null;
+function getSpreadsheet() {
+  if (!_cachedSS) {
+    _cachedSS = (SPREADSHEET_ID && SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID_HERE')
+      ? SpreadsheetApp.openById(SPREADSHEET_ID)
+      : SpreadsheetApp.getActiveSpreadsheet();
+  }
+  return _cachedSS;
+}
+
 // ─── Helper: เปิด Sheet (สร้างใหม่พร้อม Header ถ้ายังไม่มี) ───────────────
 function getSheet(name) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
@@ -117,6 +128,7 @@ function doGet(e) {
     switch (action) {
       case 'getData':          return handleGetData(role);
       case 'getBorrowRecords': return handleGetBorrowRecords();
+      case 'login':            return handleLogin(e.parameter || {});
       default:
         return jsonErr('Unknown GET action: ' + action);
     }
@@ -131,7 +143,10 @@ function doPost(e) {
   try {
     let payload;
     try {
-      payload = JSON.parse(e.postData.contents);
+      const contents = (e && e.postData && e.postData.contents)
+        ? e.postData.contents
+        : (e && e.parameter ? JSON.stringify(e.parameter) : '{}');
+      payload = JSON.parse(contents);
     } catch {
       return jsonErr('Request body ไม่ใช่ JSON ที่ถูกต้อง');
     }
@@ -152,7 +167,8 @@ function doPost(e) {
 
       // ── User/Admin: Transactions ─────────────────────────────────────────
       case 'borrowDevice':       return handleBorrowDevice(payload);
-      case 'returnDevice':       return handleReturnDevice(payload);
+      case 'returnDevice':
+      case 'return_device':      return handleReturnDevice(payload);
 
       // ── EquipmentBorrowDashboard: BorrowRecords ──────────────────────────
       case 'addBorrowRecord':    return handleAddBorrowRecord(payload);
@@ -172,20 +188,27 @@ function doPost(e) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * POST { action:'login', username, password }
+ * POST/GET { action:'login', username, password }
  * ← { success, user:{ username, name, role, department, phone, email, avatarUrl } }
  */
 function handleLogin(p) {
   const username = String(p.username || '').trim().toLowerCase();
-  const password = String(p.password || '').trim();
+  const password = String(p.password !== undefined && p.password !== null ? p.password : '').trim();
 
   if (!username || !password)
     return jsonErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
 
-  const users = sheetToObjects(getSheet(SHEET_USERS));
+  let users = sheetToObjects(getSheet(SHEET_USERS));
+
+  // Auto-seed default admin user ถ้าชีท Users ยังไม่มีข้อมูลผู้ใช้
+  if (users.length === 0) {
+    getSheet(SHEET_USERS).appendRow(['admin', 'admin1234', 'ผู้ดูแลระบบ', 'admin', nowDateTime(), 'ไอที', '', '', '']);
+    users = sheetToObjects(getSheet(SHEET_USERS));
+  }
+
   const found = users.find(u =>
     String(u.username || '').trim().toLowerCase() === username &&
-    String(u.password || '').trim() === password
+    String(u.password !== undefined && u.password !== null ? u.password : '').trim() === password
   );
 
   if (!found) return jsonErr('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');

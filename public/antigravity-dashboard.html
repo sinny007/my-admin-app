@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity | Equipment Hub — Next-Gen Hardware Logistics</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'deep-space': '#0B0F19',
+            'glass-surface': 'rgba(17, 24, 39, 0.72)',
+            'glass-border': 'rgba(255, 255, 255, 0.08)',
+            'neon-cyan': '#00F2FE',
+            'neon-blue': '#4FACFE',
+            'neon-purple': '#A855F7',
+            'neon-violet': '#7C3AED',
+            'neon-emerald': '#10B981',
+            'neon-amber': '#F59E0B',
+            'neon-rose': '#F43F5E',
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'glow-cyan': '0 0 25px -4px rgba(0, 242, 254, 0.35)',
+            'glow-purple': '0 0 25px -4px rgba(168, 85, 247, 0.35)',
+            'glow-emerald': '0 0 25px -4px rgba(16, 185, 129, 0.35)',
+            'glass': '0 20px 50px rgba(0, 0, 0, 0.5)',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' },
+            },
+            scan: {
+              '0%': { top: '5%' },
+              '50%': { top: '90%' },
+              '100%': { top: '5%' },
+            },
+            pulseGlow: {
+              '0%, 100%': { opacity: '0.4' },
+              '50%': { opacity: '0.8' },
+            }
+          },
+          animation: {
+            'float-slow': 'float 5s ease-in-out infinite',
+            'float-delayed': 'float 6s ease-in-out 2s infinite',
+            'scan-line': 'scan 2.5s ease-in-out infinite',
+            'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Antigravity Glassmorphism Base */
+    body {
+      background-color: #0B0F19;
+      color: #F3F4F6;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Futuristic Grid & Glow Orbs */
+    .cyber-grid {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    }
+
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+    }
+
+    .glass-panel-interactive {
+      background: rgba(17, 24, 39, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-panel-interactive:hover {
+      background: rgba(22, 32, 53, 0.85);
+      border-color: rgba(0, 242, 254, 0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 22px 45px -12px rgba(0, 0, 0, 0.7), 0 0 25px -5px rgba(0, 242, 254, 0.15);
+    }
+
+    /* Custom Futuristic Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0F19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 242, 254, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-screen relative cyber-grid selection:bg-cyan-500/30 selection:text-cyan-300">
+
+  <!-- Ambient Light Orbs for Antigravity Depth -->
+  <div class="fixed top-[-10%] left-[-5%] w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[140px] pointer-events-none animate-pulse-glow"></div>
+  <div class="fixed top-[20%] right-[-10%] w-[650px] h-[650px] bg-purple-600/10 rounded-full blur-[160px] pointer-events-none animate-pulse-glow" style="animation-delay: 1.5s;"></div>
+  <div class="fixed bottom-[-10%] left-[25%] w-[550px] h-[550px] bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container" class="fixed top-20 right-6 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- Main Container -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- 1. TOP NAVIGATION BAR -->
+    <header class="glass-panel rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 sticky top-4 z-40 shadow-glass border-white/10">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3.5 shrink-0">
+        <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 via-indigo-500 to-purple-600 p-[1.5px] shadow-glow-cyan animate-float-slow">
+          <div class="w-full h-full bg-[#0B0F19] rounded-[10px] flex items-center justify-center">
+            <i data-lucide="atom" class="w-6 h-6 text-neon-cyan"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-lg font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-cyan-300">ANTIGRAVITY</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-neon-cyan font-mono font-medium">HUB 2.4</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-medium tracking-wide">Hardware Logistics & Telemetry</p>
+        </div>
+      </div>
+
+      <!-- Central Search Bar -->
+      <div class="flex-1 max-w-xl hidden md:block">
+        <div class="relative group">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-neon-cyan transition-colors">
+            <i data-lucide="search" class="w-4 h-4"></i>
+          </div>
+          <input 
+            type="text" 
+            id="global-search-input"
+            placeholder="Search hardware by ID, name, sensor tag, or specs..." 
+            class="w-full pl-10 pr-12 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-500/20 focus:bg-slate-900 transition-all font-sans"
+          >
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <kbd class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60 shadow-inner">Ctrl K</kbd>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Icons & Profile -->
+      <div class="flex items-center gap-3 shrink-0">
+        <!-- Quick Scan QR Action -->
+        <button 
+          onclick="openQrModal()"
+          class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 hover:border-cyan-400/40 text-xs font-semibold text-slate-200 hover:text-white transition-all shadow-sm cursor-pointer"
+          title="Scan Equipment QR Tag"
+        >
+          <i data-lucide="qr-code" class="w-4 h-4 text-neon-cyan"></i>
+          <span>Scan QR</span>
+        </button>
+
+        <!-- Notification Bell with Glowing Badge -->
+        <div class="relative">
+          <button 
+            onclick="toggleNotifications()"
+            id="notif-btn"
+            class="relative p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all cursor-pointer"
+            aria-label="Notifications"
+          >
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-neon-rose shadow-[0_0_8px_#F43F5E] animate-ping"></span>
+            <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-neon-rose"></span>
+          </button>
+
+          <!-- Notification Dropdown Panel -->
+          <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-80 glass-panel rounded-2xl p-4 shadow-2xl z-50 border-white/15 animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-300">System Telemetry</span>
+              <span class="text-[11px] text-cyan-400 font-mono">3 unread</span>
+            </div>
+            <div class="mt-3 space-y-2.5 text-xs">
+              <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex gap-2.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+                <div>
+                  <p class="font-semibold text-white">Return Overdue Today</p>
+                  <p class="text-[11px] text-slate-400">LiDAR Scanner unit due by 18:00</p>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 flex gap-2.5">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5"></i>
+                <div>
+                  <p class="font-semibold text-white">Dock 04 Restocked</p>
+                  <p class="text-[11px] text-slate-400">5x Jetson Orin Nano modules ready</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-6 w-px bg-white/10 mx-1"></div>
+
+        <!-- User Profile Pill -->
+        <div class="flex items-center gap-3 p-1 pl-2 pr-3.5 rounded-xl bg-slate-900/60 border border-white/10 hover:border-cyan-500/30 transition-all cursor-pointer group">
+          <div class="relative">
+            <img 
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" 
+              alt="Lab Technician" 
+              class="w-9 h-9 rounded-lg object-cover ring-2 ring-cyan-400/40 group-hover:ring-cyan-400 transition-all"
+            >
+            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-neon-emerald ring-2 ring-deep-space"></span>
+          </div>
+          <div class="text-left">
+            <div class="text-xs font-bold text-slate-100 leading-tight group-hover:text-neon-cyan transition-colors">Dr. Kira Vance</div>
+            <div class="text-[10px] font-mono text-cyan-400/90 font-medium tracking-tight">Lab Technician • Sector 7</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MOBILE SEARCH (Visible only on small devices) -->
+    <div class="block md:hidden">
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+          <i data-lucide="search" class="w-4 h-4"></i>
+        </div>
+        <input 
+          type="text" 
+          id="mobile-search-input"
+          placeholder="Search hardware..." 
+          class="w-full pl-10 pr-4 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 font-sans"
+        >
+      </div>
+    </div>
+
+    <!-- 2. KEY METRICS OVERVIEW (3 Floating Cards) -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <!-- Card 1: Available Equipment -->
+      <div class="glass-panel-interactive rounded-2xl p-6 relative overflow-hidden group">
+        <!-- Ambient subtle gradient glow -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-neon-cyan/10 rounded-full blur-2xl group-hover:bg-neon-cyan/20 transition-all"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Available Fleet</span>
+            <h3 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 font-mono tracking-tight flex items-baseline gap-2">
+              <span id="metric-available">142</span>
+              <span class="text-xs font-sans text-neon-emerald font-semibold flex items-center">
+                <i data-lucide="trending-up" class="w-3.5 h-3.5 inline mr-0.5"></i> +4 units
+              </span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-neon-emerald"></span>
+              91.6% Readiness across all docks
+            </p>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-neon-cyan shadow-glow-cyan">
+            <i data-lucide="cpu" class="w-6 h-6"></i>
+          </div>
+        </div>
+        <div class="mt-5 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+          <div class="bg-gradient-to-r from-cyan-400 to-emerald-400 h-1.5 rounded-full" style="width: 88%"></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Currently Borrowed -->
+      <div class="glass-panel-interactive rounded-2xl p-6 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-neon-purple/10 rounded-full blur-2xl group-hover:bg-neon-purple/20 transition-all"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Active Deployments</span>
+            <h3 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 font-mono tracking-tight flex items-baseline gap-2">
+              <span id="metric-borrowed">18</span>
+              <span class="text-xs font-sans text-purple-300 font-semibold">Active Labs</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-neon-purple animate-ping"></span>
+              12 research teams engaged
+            </p>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-neon-purple shadow-glow-purple">
+            <i data-lucide="radio" class="w-6 h-6"></i>
+          </div>
+        </div>
+        <div class="mt-5 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+          <div class="bg-gradient-to-r from-purple-500 to-indigo-400 h-1.5 rounded-full" style="width: 62%"></div>
+        </div>
+      </div>
+
+      <!-- Card 3: Due for Return Today (Warning Border) -->
+      <div class="glass-panel-interactive rounded-2xl p-6 relative overflow-hidden group border-amber-500/40 hover:border-amber-400 shadow-[0_0_20px_-8px_rgba(245,158,11,0.2)]">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-neon-amber/15 rounded-full blur-2xl group-hover:bg-neon-amber/25 transition-all"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-300 font-mono">Return Due Today</span>
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">Action</span>
+            </div>
+            <h3 class="text-3xl sm:text-4xl font-extrabold text-amber-100 mt-2 font-mono tracking-tight flex items-baseline gap-2">
+              <span id="metric-due-today">3</span>
+              <span class="text-xs font-sans text-amber-300/80 font-medium">Items pending</span>
+            </h3>
+            <p class="text-xs text-amber-200/70 mt-2 flex items-center gap-1.5">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-400"></i>
+              Earliest slot closes in 2h 45m
+            </p>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+            <i data-lucide="alarm-clock" class="w-6 h-6"></i>
+          </div>
+        </div>
+        <div class="mt-5 w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden">
+          <div class="bg-amber-400 h-1.5 rounded-full" style="width: 35%"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. PRIMARY ACTION BAR (Floating Container) -->
+    <section class="glass-panel rounded-2xl p-5 sm:p-6 shadow-2xl border-white/10 relative overflow-hidden">
+      <!-- Glow Accent Stripes -->
+      <div class="absolute -left-20 top-0 w-48 h-full bg-gradient-to-r from-cyan-500/20 to-transparent blur-xl pointer-events-none"></div>
+      <div class="absolute -right-20 top-0 w-48 h-full bg-gradient-to-l from-purple-500/20 to-transparent blur-xl pointer-events-none"></div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-5 relative z-10">
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <span>Hardware Dispatch Terminal</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Station Online
+            </span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Initiate high-speed RFID checkouts or register automated drop-off bay returns</p>
+        </div>
+
+        <!-- 2 Prominent Primary Buttons -->
+        <div class="flex items-center gap-3.5 w-full sm:w-auto">
+          <!-- Button 1: Borrow Equipment (Cyan Gradient) -->
+          <button 
+            onclick="openBorrowModal()"
+            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 shadow-glow-cyan hover:shadow-[0_0_35px_-4px_rgba(0,242,254,0.6)] transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
+          >
+            <i data-lucide="plus-circle" class="w-4 h-4 stroke-[2.5]"></i>
+            <span>Borrow Equipment</span>
+          </button>
+
+          <!-- Button 2: Return Equipment / Scan QR (Purple/Emerald Gradient) -->
+          <button 
+            onclick="openQrModal()"
+            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 hover:from-purple-500 hover:to-emerald-400 shadow-glow-purple hover:shadow-[0_0_35px_-4px_rgba(168,85,247,0.5)] transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
+          >
+            <i data-lucide="scan" class="w-4 h-4 stroke-[2.5]"></i>
+            <span>Return / Scan QR</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. ACTIVE BORROWED ITEMS (Current User View) -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+            <i data-lucide="box" class="w-5 h-5 text-neon-cyan"></i>
+            <span>My Active Borrowed Hardware</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Hardware currently signed out under technician credential <span class="font-mono text-cyan-300">#TECH-8821</span></p>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          <span>Showing 2 assigned units</span>
+        </div>
+      </div>
+
+      <!-- User's Active Items Cards Grid / Table Container -->
+      <div class="glass-panel rounded-2xl overflow-hidden border-white/10 shadow-glass">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-white/10 bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider font-mono">
+                <th class="py-3.5 px-5">Equipment & Specification</th>
+                <th class="py-3.5 px-4">Asset Tag</th>
+                <th class="py-3.5 px-4">Checkout Date</th>
+                <th class="py-3.5 px-4">Return Deadline</th>
+                <th class="py-3.5 px-4">Telemetry Status</th>
+                <th class="py-3.5 px-5 text-right">Quick Action</th>
+              </tr>
+            </thead>
+            <tbody id="my-borrowed-list" class="divide-y divide-white/5">
+              
+              <!-- Item 1: On Time -->
+              <tr class="hover:bg-slate-800/40 transition-colors group">
+                <td class="py-4 px-5">
+                  <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-neon-cyan shrink-0">
+                      <i data-lucide="glasses" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold text-white group-hover:text-cyan-300 transition-colors">MagicLeap 2 Enterprise AR Rig</div>
+                      <div class="text-xs text-slate-400">Optics Module v3 • Lab Deck 2</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-4 px-4 font-mono text-xs text-slate-300">AGY-AR-4091</td>
+                <td class="py-4 px-4 text-xs text-slate-300">Sep 08, 2026</td>
+                <td class="py-4 px-4 text-xs font-medium text-slate-200">
+                  <div class="flex items-center gap-1.5">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    <span>Sep 16, 2026</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    On Time (4 Days left)
+                  </span>
+                </td>
+                <td class="py-4 px-5 text-right">
+                  <button 
+                    onclick="initiateReturnItem('AGY-AR-4091', 'MagicLeap 2 Enterprise AR Rig')"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-400/40 text-cyan-300 hover:text-white transition-all cursor-pointer shadow-sm inline-flex items-center gap-1.5"
+                  >
+                    <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
+                    <span>Initiate Return</span>
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Item 2: Overdue Warning -->
+              <tr class="hover:bg-slate-800/40 transition-colors group bg-amber-500/[0.03]">
+                <td class="py-4 px-5">
+                  <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                      <i data-lucide="radar" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <div class="font-bold text-white group-hover:text-amber-300 transition-colors">Ouster OS1-32 LiDAR Sensor</div>
+                      <div class="text-xs text-slate-400">32-Channel 3D Scanner • Bay 4</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-4 px-4 font-mono text-xs text-slate-300">AGY-LID-1102</td>
+                <td class="py-4 px-4 text-xs text-slate-300">Sep 01, 2026</td>
+                <td class="py-4 px-4 text-xs font-medium text-amber-300">
+                  <div class="flex items-center gap-1.5">
+                    <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Sep 12, 2026 (Today)</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                    Due Today (Urgent)
+                  </span>
+                </td>
+                <td class="py-4 px-5 text-right">
+                  <button 
+                    onclick="initiateReturnItem('AGY-LID-1102', 'Ouster OS1-32 LiDAR Sensor')"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 hover:text-white transition-all cursor-pointer shadow-sm inline-flex items-center gap-1.5"
+                  >
+                    <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
+                    <span>Initiate Return</span>
+                  </button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. EQUIPMENT CATALOG (Grid View) -->
+    <section class="space-y-5">
+      <!-- Catalog Header & Filter Controls -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+            <i data-lucide="layers" class="w-5 h-5 text-neon-purple"></i>
+            <span>Hardware Arsenal Catalog</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Browse available robotic units, spatial computing goggles, and sensor clusters</p>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/80 border border-white/10 text-xs">
+          <button onclick="filterCatalog('all')" class="filter-tab active px-3 py-1.5 rounded-lg font-medium text-white bg-cyan-500/20 border border-cyan-500/40 transition-all cursor-pointer">All Fleet</button>
+          <button onclick="filterCatalog('available')" class="filter-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Available</button>
+          <button onclick="filterCatalog('in_use')" class="filter-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all cursor-pointer">In Use</button>
+          <button onclick="filterCatalog('maintenance')" class="filter-tab px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Maintenance</button>
+        </div>
+      </div>
+
+      <!-- Catalog Grid of Cards -->
+      <div id="equipment-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <!-- Equipment Card 1: Drone -->
+        <div class="catalog-card glass-panel-interactive rounded-2xl p-5 flex flex-col justify-between group" data-status="available" data-name="Skydio X2 Autonomous Drone" data-tag="AGY-DRN-0089">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">AGY-DRN-0089</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Available
+              </span>
+            </div>
+
+            <!-- Hardware Icon Artwork Container -->
+            <div class="my-5 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-slate-800 to-indigo-500/10 border border-white/10 flex items-center justify-center text-neon-cyan group-hover:scale-110 group-hover:shadow-glow-cyan transition-all duration-300">
+                <i data-lucide="plane" class="w-10 h-10 transform -rotate-45"></i>
+              </div>
+            </div>
+
+            <h3 class="font-bold text-white text-base group-hover:text-neon-cyan transition-colors">Skydio X2 AI Drone</h3>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">Autonomous 360° obstacle avoidance aerial rig with 4K FLIR thermal payload.</p>
+
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>Dock: Bay 01</span>
+              <span>Battery: 98%</span>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <button 
+              onclick="requestBorrowDevice('AGY-DRN-0089', 'Skydio X2 AI Drone')"
+              class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 hover:border-cyan-400 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+              <span>Request Borrow</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Equipment Card 2: AR Glasses -->
+        <div class="catalog-card glass-panel-interactive rounded-2xl p-5 flex flex-col justify-between group" data-status="available" data-name="Apple Vision Pro Developer Kit" data-tag="AGY-AR-9921">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">AGY-AR-9921</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Available
+              </span>
+            </div>
+
+            <div class="my-5 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/10 via-slate-800 to-indigo-500/10 border border-white/10 flex items-center justify-center text-neon-purple group-hover:scale-110 group-hover:shadow-glow-purple transition-all duration-300">
+                <i data-lucide="glasses" class="w-10 h-10"></i>
+              </div>
+            </div>
+
+            <h3 class="font-bold text-white text-base group-hover:text-neon-purple transition-colors">Apple Vision Pro DevKit</h3>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">Spatial computing headset with M2 + R1 dual chip array and eye-tracking sensors.</p>
+
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>Dock: Spatial Lab</span>
+              <span>Storage: 1TB</span>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <button 
+              onclick="requestBorrowDevice('AGY-AR-9921', 'Apple Vision Pro DevKit')"
+              class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-500/15 hover:bg-purple-500 text-purple-300 hover:text-white border border-purple-500/30 hover:border-purple-400 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+              <span>Request Borrow</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Equipment Card 3: Microcontroller / Embedded AI (In Use) -->
+        <div class="catalog-card glass-panel rounded-2xl p-5 flex flex-col justify-between opacity-80 group border-white/5" data-status="in_use" data-name="NVIDIA Jetson AGX Orin 64GB" data-tag="AGY-JTN-7734">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">AGY-JTN-7734</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span> In Use
+              </span>
+            </div>
+
+            <div class="my-5 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-2xl bg-slate-800/80 border border-white/5 flex items-center justify-center text-slate-500">
+                <i data-lucide="cpu" class="w-10 h-10"></i>
+              </div>
+            </div>
+
+            <h3 class="font-bold text-slate-300 text-base">Jetson AGX Orin 64GB</h3>
+            <p class="text-xs text-slate-500 mt-1 line-clamp-2">275 TOPS AI supercomputer module for robotics edge computing.</p>
+
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-500">
+              <span>Holder: Robotics Alpha</span>
+              <span>Due: Sep 18</span>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <button 
+              disabled
+              class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-800/60 text-slate-500 border border-white/5 cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+              <span>Currently In Use</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Equipment Card 4: Precision Sensor (Available) -->
+        <div class="catalog-card glass-panel-interactive rounded-2xl p-5 flex flex-col justify-between group" data-status="available" data-name="FLIR E8-XT Infrared Camera" data-tag="AGY-SNS-2099">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">AGY-SNS-2099</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Available
+              </span>
+            </div>
+
+            <div class="my-5 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-slate-800 to-cyan-500/10 border border-white/10 flex items-center justify-center text-neon-emerald group-hover:scale-110 group-hover:shadow-glow-emerald transition-all duration-300">
+                <i data-lucide="aperture" class="w-10 h-10"></i>
+              </div>
+            </div>
+
+            <h3 class="font-bold text-white text-base group-hover:text-neon-emerald transition-colors">FLIR E8-XT Thermal Imager</h3>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">High-accuracy 320x240 IR resolution thermal diagnosis imager with MSX blending.</p>
+
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>Dock: Diagnostic Locker</span>
+              <span>Calibrated: Sep 02</span>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <button 
+              onclick="requestBorrowDevice('AGY-SNS-2099', 'FLIR E8-XT Thermal Imager')"
+              class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/30 hover:border-emerald-400 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+              <span>Request Borrow</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Equipment Card 5: Robotics Actuator (Maintenance) -->
+        <div class="catalog-card glass-panel rounded-2xl p-5 flex flex-col justify-between opacity-80 group border-white/5" data-status="maintenance" data-name="Unitree Go1 Quadruped Robot" data-tag="AGY-BOT-3011">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">AGY-BOT-3011</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Maintenance
+              </span>
+            </div>
+
+            <div class="my-5 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-2xl bg-slate-800/80 border border-white/5 flex items-center justify-center text-slate-500">
+                <i data-lucide="bot" class="w-10 h-10"></i>
+              </div>
+            </div>
+
+            <h3 class="font-bold text-slate-300 text-base">Unitree Go1 Quadruped</h3>
+            <p class="text-xs text-slate-500 mt-1 line-clamp-2">Bionic robotic companion platform undergoing joint actuator servo recalibration.</p>
+
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-500">
+              <span>Dock: Service Workshop</span>
+              <span>ETA: 2 Days</span>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <button 
+              disabled
+              class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-800/60 text-slate-500 border border-white/5 cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+              <span>Under Calibration</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Equipment Card 6: Quantum Logic Analyzer (Available) -->
+        <div class="catalog-card glass-panel-interactive rounded-2xl p-5 flex flex-col justify-between group" data-status="available" data-name="Saleae Logic Pro 16 Analyzer" data-tag="AGY-OSC-4412">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5">AGY-OSC-4412</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Available
+              </span>
+            </div>
+
+            <div class="my-5 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-slate-800 to-indigo-500/10 border border-white/10 flex items-center justify-center text-neon-cyan group-hover:scale-110 group-hover:shadow-glow-cyan transition-all duration-300">
+                <i data-lucide="activity" class="w-10 h-10"></i>
+              </div>
+            </div>
+
+            <h3 class="font-bold text-white text-base group-hover:text-neon-cyan transition-colors">Saleae Logic Pro 16</h3>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">16-Channel 500MS/s digital and analog high-speed hardware protocol debugger.</p>
+
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>Dock: Bench 09</span>
+              <span>Probe Set: A+B</span>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <button 
+              onclick="requestBorrowDevice('AGY-OSC-4412', 'Saleae Logic Pro 16')"
+              class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/30 hover:border-cyan-400 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[2.5]"></i>
+              <span>Request Borrow</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="pt-6 pb-4 border-t border-white/5 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-neon-cyan animate-pulse"></span>
+        <span class="font-mono text-slate-400">Antigravity Distributed Workspace Ecosystem v2.4</span>
+      </div>
+      <div>Telemetry Synchronized with Google Apps Script Cloud Engine</div>
+    </footer>
+
+  </div>
+
+  <!-- ================= MODALS & POPUPS ================= -->
+
+  <!-- Modal 1: Quick Scan QR Simulation -->
+  <div id="qr-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-all">
+    <div class="relative w-full max-w-md glass-panel rounded-3xl p-6 sm:p-7 border-white/20 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <button onclick="closeQrModal()" class="absolute top-5 right-5 p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="text-center mb-6">
+        <div class="inline-flex p-3 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-neon-purple mb-3 shadow-glow-purple">
+          <i data-lucide="scan-line" class="w-7 h-7"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">Optical RFID & QR Scanner</h3>
+        <p class="text-xs text-slate-400 mt-1">Position hardware QR code or asset barcode within target reticle</p>
+      </div>
+
+      <!-- Scanner Viewfinder Box -->
+      <div class="relative w-full h-56 rounded-2xl bg-slate-900 border border-cyan-500/40 overflow-hidden flex items-center justify-center group shadow-inner">
+        <!-- Laser Scan Animation -->
+        <div class="absolute inset-x-4 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#00F2FE] animate-scan-line z-20"></div>
+        
+        <!-- Corner Reticles -->
+        <div class="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-neon-cyan"></div>
+        <div class="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-neon-cyan"></div>
+        <div class="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-neon-cyan"></div>
+        <div class="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-neon-cyan"></div>
+
+        <!-- Sample Mock QR in Viewfinder -->
+        <div class="flex flex-col items-center justify-center text-slate-500">
+          <i data-lucide="qr-code" class="w-24 h-24 opacity-30 text-cyan-300 animate-pulse"></i>
+          <span class="text-[11px] font-mono text-cyan-400/70 mt-2">Target Lock: SEARCHING_TAG...</span>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-between gap-3">
+        <button 
+          onclick="simulateScanDetection()" 
+          class="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-slate-950 bg-neon-cyan hover:bg-cyan-300 shadow-glow-cyan transition-all cursor-pointer flex items-center justify-center gap-2"
+        >
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          <span>Simulate Scan Detected</span>
+        </button>
+        <button onclick="closeQrModal()" class="py-3 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/80 border border-white/10 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Equipment Borrow Form Modal -->
+  <div id="borrow-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-all">
+    <div class="relative w-full max-w-lg glass-panel rounded-3xl p-6 sm:p-8 border-white/20 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <button onclick="closeBorrowModal()" class="absolute top-5 right-5 p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-6">
+        <div class="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-neon-cyan shadow-glow-cyan">
+          <i data-lucide="file-plus" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Hardware Checkout Request</h3>
+          <p class="text-xs text-slate-400">Specify assignment period and research project code</p>
+        </div>
+      </div>
+
+      <form id="borrow-form" onsubmit="handleBorrowSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-mono uppercase text-slate-400 mb-1.5">Selected Unit</label>
+          <input 
+            type="text" 
+            id="borrow-item-name" 
+            readonly 
+            class="w-full px-4 py-2.5 bg-slate-900/90 border border-white/10 rounded-xl text-sm font-semibold text-cyan-300 font-mono focus:outline-none cursor-default"
+          >
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-mono uppercase text-slate-400 mb-1.5">Asset Tag</label>
+            <input 
+              type="text" 
+              id="borrow-item-tag" 
+              readonly 
+              class="w-full px-4 py-2.5 bg-slate-900/90 border border-white/10 rounded-xl text-sm text-slate-300 font-mono focus:outline-none cursor-default"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-mono uppercase text-slate-400 mb-1.5">Technician</label>
+            <input 
+              type="text" 
+              value="Dr. Kira Vance" 
+              readonly 
+              class="w-full px-4 py-2.5 bg-slate-900/90 border border-white/10 rounded-xl text-sm text-slate-300 focus:outline-none cursor-default"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono uppercase text-slate-400 mb-1.5">Expected Return Date</label>
+          <input 
+            type="date" 
+            id="borrow-return-date" 
+            required 
+            class="w-full px-4 py-2.5 bg-slate-900 border border-white/15 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400 font-mono"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono uppercase text-slate-400 mb-1.5">Project / Research Scope</label>
+          <input 
+            type="text" 
+            required 
+            placeholder="e.g. Autonomous SLAM Navigation Test (Sector 4)"
+            class="w-full px-4 py-2.5 bg-slate-900 border border-white/15 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+          >
+        </div>
+
+        <div class="pt-3 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeBorrowModal()" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/80 border border-white/10">
+            Cancel
+          </button>
+          <button type="submit" class="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-300 hover:from-cyan-300 hover:to-teal-200 shadow-glow-cyan cursor-pointer transition-all">
+            Confirm Checkout
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Set Default Return Date in Borrow Modal to 7 Days Ahead
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 7);
+    document.getElementById('borrow-return-date').value = defaultDate.toISOString().split('T')[0];
+
+    // Notification Dropdown Toggle
+    function toggleNotifications() {
+      const dropdown = document.getElementById('notif-dropdown');
+      dropdown.classList.toggle('hidden');
+    }
+
+    // Close notification when clicking outside
+    document.addEventListener('click', (e) => {
+      const notifBtn = document.getElementById('notif-btn');
+      const dropdown = document.getElementById('notif-dropdown');
+      if (!notifBtn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Toast Notification Creator
+    function showToast(title, message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      const typeStyles = {
+        success: 'border-emerald-500/40 bg-slate-900/95 text-emerald-300 shadow-glow-emerald',
+        warning: 'border-amber-500/40 bg-slate-900/95 text-amber-300 shadow-glow-purple',
+        info: 'border-cyan-500/40 bg-slate-900/95 text-cyan-300 shadow-glow-cyan'
+      };
+
+      const icons = {
+        success: 'check-circle-2',
+        warning: 'alert-triangle',
+        info: 'info'
+      };
+
+      toast.className = `pointer-events-auto flex items-start gap-3 p-4 rounded-2xl glass-panel border ${typeStyles[type]} shadow-2xl transition-all duration-300 translate-y-2 opacity-0 max-w-sm w-80`;
+      toast.innerHTML = `
+        <i data-lucide="${icons[type]}" class="w-5 h-5 shrink-0 mt-0.5"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-bold text-white">${title}</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">${message}</p>
+        </div>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Animate out & remove
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // QR Modal Controls
+    function openQrModal() {
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+    function closeQrModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    function simulateScanDetection() {
+      closeQrModal();
+      showToast('Optical RFID Tag Locked', 'Detected: Ouster OS1-32 LiDAR Sensor [AGY-LID-1102]. Ready for docking return.', 'info');
+      setTimeout(() => {
+        initiateReturnItem('AGY-LID-1102', 'Ouster OS1-32 LiDAR Sensor');
+      }, 700);
+    }
+
+    // Borrow Modal Controls
+    function openBorrowModal(tag = 'AGY-DRN-0089', name = 'Skydio X2 AI Drone') {
+      document.getElementById('borrow-item-tag').value = tag;
+      document.getElementById('borrow-item-name').value = name;
+      document.getElementById('borrow-modal').classList.remove('hidden');
+    }
+    function closeBorrowModal() {
+      document.getElementById('borrow-modal').classList.add('hidden');
+    }
+
+    function requestBorrowDevice(tag, name) {
+      openBorrowModal(tag, name);
+    }
+
+    function handleBorrowSubmit(e) {
+      e.preventDefault();
+      const tag = document.getElementById('borrow-item-tag').value;
+      const name = document.getElementById('borrow-item-name').value;
+      const date = document.getElementById('borrow-return-date').value;
+
+      closeBorrowModal();
+      showToast('Checkout Dispatched', `Hardware "${name}" (${tag}) authorized until ${date}. Bay unlocked.`, 'success');
+
+      // Increment metrics in UI
+      const borrowedEl = document.getElementById('metric-borrowed');
+      const availEl = document.getElementById('metric-available');
+      borrowedEl.innerText = parseInt(borrowedEl.innerText) + 1;
+      availEl.innerText = parseInt(availEl.innerText) - 1;
+    }
+
+    // Initiate Return function
+    function initiateReturnItem(tag, name) {
+      const confirmReturn = confirm(`Confirm docking return for ${name} [${tag}]?`);
+      if (confirmReturn) {
+        showToast('Bay Dock Return Verified', `Telemetry recorded: "${name}" successfully returned and inspected.`, 'success');
+        
+        // Remove row if found in borrowed list
+        const rows = document.querySelectorAll('#my-borrowed-list tr');
+        rows.forEach(r => {
+          if (r.innerText.includes(tag)) {
+            r.classList.add('opacity-0', 'transition-all', 'duration-300');
+            setTimeout(() => r.remove(), 300);
+          }
+        });
+
+        // Update metrics
+        const borrowedEl = document.getElementById('metric-borrowed');
+        const availEl = document.getElementById('metric-available');
+        borrowedEl.innerText = Math.max(0, parseInt(borrowedEl.innerText) - 1);
+        availEl.innerText = parseInt(availEl.innerText) + 1;
+      }
+    }
+
+    // Real-Time Search Filter
+    function setupSearch(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const cards = document.querySelectorAll('.catalog-card');
+        cards.forEach(card => {
+          const name = (card.getAttribute('data-name') || '').toLowerCase();
+          const tag = (card.getAttribute('data-tag') || '').toLowerCase();
+          if (name.includes(query) || tag.includes(query)) {
+            card.classList.remove('hidden');
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+      });
+    }
+    setupSearch('global-search-input');
+    setupSearch('mobile-search-input');
+
+    // Filter Tabs
+    function filterCatalog(status) {
+      // Toggle active classes
+      const tabs = document.querySelectorAll('.filter-tab');
+      tabs.forEach(tab => {
+        tab.classList.remove('text-white', 'bg-cyan-500/20', 'border', 'border-cyan-500/40');
+        tab.classList.add('text-slate-400');
+      });
+      event.target.classList.add('text-white', 'bg-cyan-500/20', 'border', 'border-cyan-500/40');
+      event.target.classList.remove('text-slate-400');
+
+      // Filter cards
+      const cards = document.querySelectorAll('.catalog-card');
+      cards.forEach(card => {
+        const cardStatus = card.getAttribute('data-status');
+        if (status === 'all' || cardStatus === status) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    // Keyboard Shortcut Ctrl+K to search
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const input = document.getElementById('global-search-input');
+        if (input) input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
