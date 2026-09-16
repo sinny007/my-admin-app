@@ -31,8 +31,7 @@ import { IT_CATEGORIES, DEFAULT_CATEGORY } from '../constants/itCategories';
 const DEFAULT_APPS_SCRIPT_URL =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbxG9jHtv4457GsbJ0w0xG4_ILq09s_fzMYGB5diMracMOq_abJsW27n2CvXCdVVPngpXw/exec";
-
+  "https://script.google.com/macros/s/AKfycbz60gtQihat3WVczF81RciBYGvNcOCCUFTQwGh0xVNMaoP4XiBaMw_gYhqfCGHTnS5AEg/exec
 const formatDate = (dateStr) => {
   if (!dateStr || dateStr === '-') return '-';
   const parsedDate = new Date(dateStr);
@@ -342,13 +341,13 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
 
       {/* ─── Header ───────────────────────────────────────────────── */}
       <header className={`sticky top-0 z-30 backdrop-blur-xl border-b shadow-xs transition-colors ${
-        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200/80'
+        isDark ? 'bg-slate-900/90 border-orange-500/20' : 'bg-white/90 border-orange-200/80'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-2xl overflow-hidden shrink-0 border p-1 shadow-xs ${
-              isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+              isDark ? 'bg-slate-800 border-orange-500/30' : 'bg-white border-orange-200'
             }`}>
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
@@ -363,10 +362,10 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-3 sm:pt-0 border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-3 sm:pt-0 border-orange-100 dark:border-slate-800">
 
             {loading && (
-              <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+              <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span className="hidden sm:inline">กำลังซิงค์...</span>
               </div>
@@ -378,8 +377,8 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
               onClick={toggleTheme}
               className={`p-2 rounded-xl border transition-all cursor-pointer shadow-xs ${
                 isDark
-                  ? 'bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+                  ? 'bg-slate-800 border-orange-500/30 text-amber-300 hover:bg-slate-700 hover:border-orange-400'
+                  : 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700'
               }`}
               title={isDark ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"}
             >

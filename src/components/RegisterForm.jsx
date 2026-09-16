@@ -9,11 +9,13 @@ import {
   EyeOff, 
   UserPlus, 
   ArrowLeft, 
+  ArrowRight, 
   Loader2, 
   CheckCircle2, 
-  AlertCircle,
-  Sparkles,
-  ShieldCheck
+  AlertCircle, 
+  Sparkles, 
+  ShieldCheck, 
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -21,15 +23,19 @@ import confetti from 'canvas-confetti';
 const DEFAULT_APPS_SCRIPT_URL = 
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbxG9jHtv4457GsbJ0w0xG4_ILq09s_fzMYGB5diMracMOq_abJsW27n2CvXCdVVPngpXw/exec";
+  "https://script.google.com/macros/s/AKfycbz60gtQihat3WVczF81RciBYGvNcOCCUFTQwGh0xVNMaoP4XiBaMw_gYhqfCGHTnS5AEg/exec";
 
 export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUrl }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
+
+  // Step 1: 'role-select', Step 2: 'form-details'
+  const [currentStep, setCurrentStep] = useState(1);
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     name: '',
-    role: 'user',
+    role: 'user', // 'user' or 'admin'
     adminKey: ''
   });
 
@@ -51,33 +57,43 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      if (name === 'role' && value === 'user') {
+      if (name === 'role' && value !== 'admin') {
         updated.adminKey = '';
       }
       return updated;
     });
   };
 
-  const setRole = (role) => {
+  const handleSelectRole = (selectedRole) => {
     setFormData((prev) => ({
       ...prev,
-      role,
-      adminKey: role === 'user' ? '' : prev.adminKey
+      role: selectedRole,
+      adminKey: selectedRole === 'admin' ? prev.adminKey : ''
     }));
+  };
+
+  const handleNextStep = () => {
+    setMessage({ type: '', text: '' });
+    setCurrentStep(2);
+  };
+
+  const handlePrevStep = () => {
+    setMessage({ type: '', text: '' });
+    setCurrentStep(1);
   };
 
   // Password strength calculation
   const getPasswordStrength = () => {
     const pwd = formData.password;
-    if (!pwd) return { score: 0, text: '', color: 'bg-slate-200' };
-    if (pwd.length < 6) return { score: 1, text: 'สั้นเกินไป (ต้อง 6+ ตัว)', color: 'bg-rose-500', textColor: 'text-rose-600' };
+    if (!pwd) return { score: 0, text: '', color: 'bg-slate-200 dark:bg-slate-700' };
+    if (pwd.length < 6) return { score: 1, text: 'สั้นเกินไป (ต้อง 6+ ตัว)', color: 'bg-rose-500', textColor: 'text-rose-600 dark:text-rose-400' };
     
     let score = 2;
     if (pwd.length >= 8) score++;
     if (/[0-9]/.test(pwd) && /[a-zA-Z]/.test(pwd)) score++;
 
-    if (score <= 2) return { score: 2, text: 'ความปลอดภัยระดับ: ปานกลาง', color: 'bg-amber-500', textColor: 'text-amber-600' };
-    return { score: 3, text: 'ความปลอดภัยระดับ: แข็งแรงมาก 👍', color: 'bg-emerald-500', textColor: 'text-emerald-600' };
+    if (score <= 2) return { score: 2, text: 'ความปลอดภัยระดับ: ปานกลาง', color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' };
+    return { score: 3, text: 'ความปลอดภัยระดับ: แข็งแรงมาก 👍', color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' };
   };
 
   const strength = getPasswordStrength();
@@ -155,9 +171,10 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
         // Confetti explosion
         try {
           confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 }
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#ea580c', '#f97316', '#fb923c', '#f59e0b', '#10b981', '#ffffff']
           });
         } catch {
           // ignore
@@ -171,12 +188,19 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
           adminKey: ''
         });
 
+        // Redirect back to login automatically
         if (onRegisterSuccess) {
           setTimeout(() => {
             if (isMounted.current) {
               onRegisterSuccess();
             }
-          }, 1200);
+          }, 1400);
+        } else if (onSwitchToLogin) {
+          setTimeout(() => {
+            if (isMounted.current) {
+              onSwitchToLogin();
+            }
+          }, 1400);
         }
       } else {
         const err = result.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
@@ -199,19 +223,28 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
 
   return (
     <div className="min-h-screen w-full bg-animated flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans select-none">
-      {/* Floating Pastel Ambient Orbs */}
-      <div className="absolute top-[-10%] left-[-5%] w-[450px] h-[450px] rounded-full opacity-60 pointer-events-none animate-orb-1"
-        style={{ background: 'radial-gradient(circle, rgba(199, 210, 254, 0.7) 0%, transparent 70%)' }} />
-      <div className="absolute bottom-[-10%] right-[-5%] w-[450px] h-[450px] rounded-full opacity-50 pointer-events-none animate-orb-2"
-        style={{ background: 'radial-gradient(circle, rgba(254, 215, 170, 0.6) 0%, transparent 70%)' }} />
+      {/* Floating Warm Ambient Orbs */}
+      <div className="absolute top-[-10%] left-[-5%] w-[460px] h-[460px] rounded-full opacity-70 dark:opacity-25 pointer-events-none animate-orb-1"
+        style={{ background: 'radial-gradient(circle, rgba(254, 215, 170, 0.8) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-[-10%] right-[-5%] w-[460px] h-[460px] rounded-full opacity-60 dark:opacity-20 pointer-events-none animate-orb-2"
+        style={{ background: 'radial-gradient(circle, rgba(253, 186, 116, 0.7) 0%, transparent 70%)' }} />
+      <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full opacity-45 dark:opacity-15 pointer-events-none animate-orb-3"
+        style={{ background: 'radial-gradient(circle, rgba(254, 240, 138, 0.6) 0%, transparent 70%)' }} />
+
+      {/* Subtle Geometric Pattern Overlay */}
+      <div className="absolute inset-0 opacity-[0.045] dark:opacity-[0.06] pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle, #ea580c 1.5px, transparent 1.5px)`,
+          backgroundSize: '28px 28px'
+        }} />
 
       {/* Main Modern Card */}
-      <div className="max-w-lg w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-slate-300/40 dark:shadow-none border border-slate-200/90 dark:border-slate-800 p-7 sm:p-9 relative z-10 my-8 animate-scale-in">
+      <div className="max-w-xl w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-orange-500/10 dark:shadow-none border border-orange-200/90 dark:border-orange-950/70 p-6 sm:p-9 relative z-10 my-8 animate-scale-in">
         
         {/* Logo & Header */}
         <div className="text-center mb-6">
-          <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border-2 border-indigo-100 dark:border-slate-700 shadow-md shadow-indigo-100 dark:shadow-none bg-white dark:bg-slate-800 p-2 animate-float">
+          <div className="flex justify-center mb-3">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-orange-200 dark:border-slate-700 shadow-md shadow-orange-200/50 dark:shadow-none bg-white dark:bg-slate-800 p-2 animate-float">
               <img 
                 src="/logo.png" 
                 alt="Logo" 
@@ -220,24 +253,47 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
             </div>
           </div>
           
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100/80 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-2 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/60 border border-orange-200/80 dark:border-orange-900 text-orange-700 dark:text-orange-300 text-xs font-semibold mb-2 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400" />
             <span>สร้างบัญชีผู้ใช้งานใหม่</span>
           </div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             สมัครสมาชิก
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            กรอกข้อมูลเพื่อเริ่มต้นการใช้งานระบบยืม-คืนอุปกรณ์ไอที
+            {currentStep === 1 
+              ? 'ขั้นตอนที่ 1: เลือกประเภทบัญชีผู้ใช้งานที่ต้องการสมัคร' 
+              : `ขั้นตอนที่ 2: กรอกข้อมูลส่วนตัวสำหรับบัญชี (${formData.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้ทั่วไป'})`}
           </p>
+
+          {/* Stepper Progress Bar */}
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              currentStep === 1 
+                ? 'bg-orange-600 text-white shadow-sm shadow-orange-500/30' 
+                : 'bg-orange-100 text-orange-800 dark:bg-slate-800 dark:text-slate-300'
+            }`}>
+              <span className="w-4 h-4 rounded-full bg-white/30 flex items-center justify-center text-[10px]">1</span>
+              <span>เลือกประเภทบัญชี</span>
+            </div>
+            <div className="w-8 h-0.5 bg-orange-200 dark:bg-slate-700" />
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              currentStep === 2 
+                ? 'bg-orange-600 text-white shadow-sm shadow-orange-500/30' 
+                : 'bg-slate-100 text-slate-400 dark:bg-slate-800/60 dark:text-slate-500'
+            }`}>
+              <span className="w-4 h-4 rounded-full bg-current/20 flex items-center justify-center text-[10px]">2</span>
+              <span>กรอกข้อมูล</span>
+            </div>
+          </div>
         </div>
 
         {/* Message Alert Banner */}
         {message.text && (
           <div className={`mb-5 p-3.5 text-xs sm:text-sm rounded-2xl border flex items-start justify-between gap-3 animate-fade-up ${
             message.type === 'success' 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-              : 'bg-rose-50 border-rose-200 text-rose-700'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-300' 
+              : 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-300'
           }`}>
             <div className="flex items-start gap-2.5">
               {message.type === 'success' ? (
@@ -260,192 +316,280 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Full Name */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              ชื่อ-นามสกุล
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                <IdCard className="w-4 h-4" />
-              </div>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="เช่น นายสมชาย ใจดี"
-                className="light-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Username */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              ชื่อผู้ใช้งาน (Username)
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                <User className="w-4 h-4" />
-              </div>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="เช่น somchai.j (ภาษาอังกฤษ)"
-                className="light-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              รหัสผ่าน (Password)
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                <Lock className="w-4 h-4" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="อย่างน้อย 6 ตัวอักษร"
-                className="light-input w-full pl-10 pr-11 py-2.5 rounded-xl text-sm font-medium"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors focus:outline-none cursor-pointer"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-
-            {/* Interactive Password Strength Indicator */}
-            {formData.password && (
-              <div className="mt-2 space-y-1 animate-fade-up">
-                <div className="flex gap-1.5 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-300 ${strength.score >= 1 ? strength.color : 'bg-transparent'} w-1/3`} />
-                  <div className={`h-full transition-all duration-300 ${strength.score >= 2 ? strength.color : 'bg-transparent'} w-1/3`} />
-                  <div className={`h-full transition-all duration-300 ${strength.score >= 3 ? strength.color : 'bg-transparent'} w-1/3`} />
-                </div>
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className={`font-semibold ${strength.textColor}`}>{strength.text}</span>
-                  <span className="text-slate-400 dark:text-slate-500 font-mono">{formData.password.length} ตัวอักษร</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Role Selection (Segmented Control) */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              ประเภทบัญชีผู้ใช้ (Role)
-            </label>
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100/90 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setRole('user')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
-                  formData.role === 'user'
-                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm border border-slate-200/60 dark:border-slate-600'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+        {/* ─── STEP 1: ROLE SELECTION CARDS ───────────────────────────── */}
+        {currentStep === 1 && (
+          <div className="space-y-4 animate-scale-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              
+              {/* Option 1: General User */}
+              <div 
+                onClick={() => handleSelectRole('user')}
+                className={`relative p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left flex flex-col justify-between ${
+                  formData.role === 'user' || formData.role === 'student'
+                    ? 'bg-orange-50/90 dark:bg-orange-950/30 border-orange-500 ring-2 ring-orange-500/20 shadow-md shadow-orange-500/10'
+                    : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-orange-300 hover:bg-orange-50/30 dark:hover:bg-slate-800'
                 }`}
               >
-                <User className="w-4 h-4" />
-                <span>ผู้ใช้ทั่วไป (User)</span>
-              </button>
+                {(formData.role === 'user' || formData.role === 'student') && (
+                  <div className="absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-xs animate-scale-in">
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-3">
+                    <User className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    ผู้ใช้ทั่วไป (User)
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    สำหรับนักศึกษาและบุคคลทั่วไป ขอยืมอุปกรณ์ไอที ตรวจสอบสถานะการยืม และประวัติการใช้งาน
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-orange-100 dark:border-slate-700/60 flex items-center gap-1.5 text-[11px] font-semibold text-orange-700 dark:text-orange-300">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>สมัครง่าย ไม่ต้องใช้รหัสลับ</span>
+                </div>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setRole('admin')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+              {/* Option 2: Administrator */}
+              <div 
+                onClick={() => handleSelectRole('admin')}
+                className={`relative p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left flex flex-col justify-between ${
                   formData.role === 'admin'
-                    ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/25'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-500 ring-2 ring-amber-500/20 shadow-md shadow-amber-500/10'
+                    : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-amber-300 hover:bg-amber-50/30 dark:hover:bg-slate-800'
                 }`}
               >
-                <Shield className="w-4 h-4" />
-                <span>ผู้ดูแลระบบ (Admin)</span>
+                {formData.role === 'admin' && (
+                  <div className="absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-xs animate-scale-in">
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    ผู้ดูแลระบบ (Admin)
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    สำหรับเจ้าหน้าที่ดูแลระบบ จัดการทะเบียนอุปกรณ์ไอที อนุมัติการยืม-คืน จัดการสถิติและรายงาน
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-amber-100 dark:border-slate-700/60 flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>ต้องใช้ Admin Secret Key</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Action Buttons Step 1 */}
+            <div className="pt-2 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={handleNextStep}
+                className="w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-[0.98] btn-gradient-primary shadow-orange-500/25"
+              >
+                <span>ไปกรอกข้อมูลต่อ ({formData.role === 'admin' ? 'Admin' : 'User'})</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
+        )}
 
-          {/* Admin Secret Key (if role is admin) */}
-          {formData.role === 'admin' && (
-            <div className="p-4 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-2xl space-y-2 animate-scale-in">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>รหัสลับสำหรับผู้ดูแลระบบ (Admin Secret Key)</span>
+        {/* ─── STEP 2: FILL INFORMATION FORM ──────────────────────────── */}
+        {currentStep === 2 && (
+          <form onSubmit={handleSubmit} className="space-y-4 animate-fade-up">
+            
+            {/* Selected Role Badge with Change Button */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-orange-50/90 dark:bg-orange-950/40 border border-orange-200/90 dark:border-orange-900/70">
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-xl ${
+                  formData.role === 'admin' 
+                    ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300' 
+                    : 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300'
+                }`}>
+                  {formData.role === 'admin' ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                </div>
+                <div className="text-xs">
+                  <span className="text-slate-500 dark:text-slate-400">ประเภทบัญชีที่เลือก: </span>
+                  <span className="font-extrabold text-orange-900 dark:text-orange-200">
+                    {formData.role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'ผู้ใช้ทั่วไป (General User)'}
+                  </span>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:underline cursor-pointer"
+              >
+                เปลี่ยนโรล
+              </button>
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                ชื่อ-นามสกุล
+              </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-amber-500">
-                  <KeyRound className="w-4 h-4" />
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                  <IdCard className="w-4 h-4" />
                 </div>
                 <input
-                  type={showAdminKey ? "text" : "password"}
-                  name="adminKey"
-                  value={formData.adminKey}
+                  type="text"
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
-                  placeholder="กรอกรหัสยืนยันสิทธิ์ Admin"
-                  className="w-full pl-10 pr-11 py-2 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-xl text-slate-800 dark:text-slate-200 placeholder-amber-400/70 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition duration-200 text-sm font-medium"
+                  placeholder="เช่น นายสมชาย ใจดี"
+                  className="light-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                ชื่อผู้ใช้งาน (Username)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="เช่น somchai.j (ภาษาอังกฤษ)"
+                  className="light-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                รหัสผ่าน (Password)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  className="light-input w-full pl-10 pr-11 py-2.5 rounded-xl text-sm font-medium"
                   required
                 />
                 <button
                   type="button"
-                  onClick={() => setShowAdminKey(!showAdminKey)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-800 transition-colors focus:outline-none cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors focus:outline-none cursor-pointer"
                   tabIndex={-1}
                 >
-                  {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                * ต้องระบุรหัสผ่านลับของผู้ดูแลระบบที่ได้รับอนุญาตเท่านั้น
-              </p>
-            </div>
-          )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-3 py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98] btn-gradient-primary shadow-indigo-500/25"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>กำลังบันทึกข้อมูล...</span>
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4" />
-                <span>ยืนยันการสมัครสมาชิก</span>
-              </>
+              {/* Interactive Password Strength Indicator */}
+              {formData.password && (
+                <div className="mt-2 space-y-1 animate-fade-up">
+                  <div className="flex gap-1.5 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full transition-all duration-300 ${strength.score >= 1 ? strength.color : 'bg-transparent'} w-1/3`} />
+                    <div className={`h-full transition-all duration-300 ${strength.score >= 2 ? strength.color : 'bg-transparent'} w-1/3`} />
+                    <div className={`h-full transition-all duration-300 ${strength.score >= 3 ? strength.color : 'bg-transparent'} w-1/3`} />
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className={`font-semibold ${strength.textColor}`}>{strength.text}</span>
+                    <span className="text-slate-400 dark:text-slate-500 font-mono">{formData.password.length} ตัวอักษร</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Admin Secret Key (if role is admin) */}
+            {formData.role === 'admin' && (
+              <div className="p-4 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-2xl space-y-2 animate-scale-in">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>รหัสลับสำหรับผู้ดูแลระบบ (Admin Secret Key)</span>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-amber-500">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showAdminKey ? "text" : "password"}
+                    name="adminKey"
+                    value={formData.adminKey}
+                    onChange={handleChange}
+                    placeholder="กรอกรหัสยืนยันสิทธิ์ Admin"
+                    className="w-full pl-10 pr-11 py-2 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-xl text-slate-800 dark:text-slate-200 placeholder-amber-400/70 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition duration-200 text-sm font-medium"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminKey(!showAdminKey)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-800 transition-colors focus:outline-none cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                  * ต้องระบุรหัสผ่านลับของผู้ดูแลระบบที่ได้รับอนุญาตเท่านั้น
+                </p>
+              </div>
             )}
-          </button>
-        </form>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="py-3.5 px-4 rounded-xl font-bold text-xs sm:text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>ย้อนกลับ</span>
+              </button>
+              
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98] btn-gradient-primary shadow-orange-500/25"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>กำลังบันทึกข้อมูล...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>ยืนยันการสมัครสมาชิก</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Footer Link to Login */}
         {onSwitchToLogin && (
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+          <div className="mt-6 pt-5 border-t border-orange-100 dark:border-slate-800 text-center flex items-center justify-center gap-1.5 text-xs sm:text-sm">
             <span className="text-slate-500 dark:text-slate-400">มีบัญชีผู้ใช้งานอยู่แล้ว?</span>
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline focus:outline-none transition-colors inline-flex items-center gap-1 cursor-pointer"
+              className="font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:underline focus:outline-none transition-colors inline-flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>กลับสู่หน้าเข้าสู่ระบบ</span>

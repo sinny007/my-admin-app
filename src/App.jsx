@@ -175,15 +175,15 @@ export default function App() {
 
       <Suspense fallback={
         <div className="min-h-screen w-full bg-animated flex flex-col items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-indigo-100/50 dark:shadow-none">
+          <div className="flex flex-col items-center gap-4 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl p-8 rounded-3xl border border-orange-200/80 dark:border-orange-950/60 shadow-xl shadow-orange-100/60 dark:shadow-none">
             <div className="relative w-14 h-14">
-              <div className="absolute inset-0 rounded-full border-3 border-indigo-100 dark:border-slate-700 animate-spin-slow" />
-              <div className="absolute inset-1 rounded-full border-3 border-t-indigo-600 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+              <div className="absolute inset-0 rounded-full border-3 border-orange-100 dark:border-slate-700 animate-spin-slow" />
+              <div className="absolute inset-1 rounded-full border-3 border-t-orange-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Laptop className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <Laptop className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
-            <p className="text-sm font-semibold tracking-wider text-slate-600 dark:text-slate-300 font-sans animate-pulse">กำลังโหลดข้อมูลระบบ...</p>
+            <p className="text-sm font-semibold tracking-wider text-orange-900/80 dark:text-orange-200/90 font-sans animate-pulse">กำลังโหลดข้อมูลระบบ...</p>
           </div>
         </div>
       }>
@@ -212,8 +212,8 @@ export default function App() {
                 onClick={toggleTheme}
                 className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-md backdrop-blur-md ${
                   isDark
-                    ? 'bg-slate-800/90 border-slate-700 text-amber-300 hover:bg-slate-700 hover:border-amber-400'
-                    : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+                    ? 'bg-slate-900/90 border-orange-500/30 text-amber-400 hover:bg-slate-800 hover:border-orange-400'
+                    : 'bg-white/95 border-orange-200/90 text-orange-700 hover:bg-orange-50 hover:text-orange-600 shadow-orange-100/50'
                 }`}
                 title={isDark ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"}
               >
@@ -228,7 +228,7 @@ export default function App() {
           </div>
         ) : (
 
-        /* ─── MODERN LOGIN PAGE (LIGHT/DARK ADAPTIVE) ───────────────── */
+        /* ─── MODERN LOGIN PAGE (ORANGE & WHITE BRIGHT THEME) ──────── */
         <div className="min-h-screen w-full bg-animated flex items-center justify-center p-4 sm:p-6 relative overflow-hidden select-none">
 
           {/* Floating Theme Toggle (Login Screen) */}
@@ -238,8 +238,8 @@ export default function App() {
               onClick={toggleTheme}
               className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-md backdrop-blur-md ${
                 isDark
-                  ? 'bg-slate-800/90 border-slate-700 text-amber-300 hover:bg-slate-700 hover:border-amber-400'
-                  : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+                  ? 'bg-slate-900/90 border-orange-500/30 text-amber-400 hover:bg-slate-800 hover:border-orange-400'
+                  : 'bg-white/95 border-orange-200/90 text-orange-700 hover:bg-orange-50 hover:text-orange-600 shadow-orange-100/50'
               }`}
               title={isDark ? "สลับเป็นโหมดสว่าง (Light Mode)" : "สลับเป็นโหมดมืด (Dark Mode)"}
             >
@@ -247,19 +247,19 @@ export default function App() {
             </button>
           </div>
 
-          {/* Floating Ambient Orbs */}
-          <div className="absolute top-[-10%] left-[-5%] w-[480px] h-[480px] rounded-full opacity-60 dark:opacity-30 pointer-events-none animate-orb-1"
-            style={{ background: 'radial-gradient(circle, rgba(199, 210, 254, 0.7) 0%, transparent 70%)' }} />
-          <div className="absolute bottom-[-10%] right-[-5%] w-[460px] h-[460px] rounded-full opacity-50 dark:opacity-25 pointer-events-none animate-orb-2"
-            style={{ background: 'radial-gradient(circle, rgba(233, 213, 255, 0.7) 0%, transparent 70%)' }} />
-          <div className="absolute top-[35%] right-[15%] w-[320px] h-[320px] rounded-full opacity-40 dark:opacity-20 pointer-events-none animate-orb-3"
-            style={{ background: 'radial-gradient(circle, rgba(186, 230, 253, 0.7) 0%, transparent 70%)' }} />
+          {/* Floating Ambient Warm Orbs */}
+          <div className="absolute top-[-10%] left-[-5%] w-[480px] h-[480px] rounded-full opacity-70 dark:opacity-25 pointer-events-none animate-orb-1"
+            style={{ background: 'radial-gradient(circle, rgba(254, 215, 170, 0.8) 0%, transparent 70%)' }} />
+          <div className="absolute bottom-[-10%] right-[-5%] w-[460px] h-[460px] rounded-full opacity-60 dark:opacity-20 pointer-events-none animate-orb-2"
+            style={{ background: 'radial-gradient(circle, rgba(253, 186, 116, 0.7) 0%, transparent 70%)' }} />
+          <div className="absolute top-[35%] right-[15%] w-[320px] h-[320px] rounded-full opacity-50 dark:opacity-15 pointer-events-none animate-orb-3"
+            style={{ background: 'radial-gradient(circle, rgba(254, 240, 138, 0.6) 0%, transparent 70%)' }} />
 
-          {/* Subtle Grid Accent */}
-          <div className="absolute inset-0 opacity-[0.035] dark:opacity-[0.05] pointer-events-none"
+          {/* Subtle Geometric Pattern Overlay */}
+          <div className="absolute inset-0 opacity-[0.045] dark:opacity-[0.06] pointer-events-none"
             style={{
-              backgroundImage: `linear-gradient(#6366f1 1px, transparent 1px), linear-gradient(90deg, #6366f1 1px, transparent 1px)`,
-              backgroundSize: '48px 48px'
+              backgroundImage: `radial-gradient(circle, #ea580c 1.5px, transparent 1.5px)`,
+              backgroundSize: '28px 28px'
             }} />
 
           {/* Login Card Container */}
@@ -267,15 +267,15 @@ export default function App() {
 
             {/* Glowing card border background */}
             <div className="absolute -inset-1 rounded-[32px] opacity-40 dark:opacity-30 blur-xl pointer-events-none"
-              style={{ background: 'linear-gradient(135deg, #818cf8, #c084fc, #38bdf8)' }} />
+              style={{ background: 'linear-gradient(135deg, #fb923c, #f97316, #f59e0b)' }} />
 
-            <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl p-7 sm:p-9 shadow-2xl border border-slate-200/90 dark:border-slate-800">
+            <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl p-7 sm:p-9 shadow-2xl shadow-orange-500/10 dark:shadow-none border border-orange-200/90 dark:border-orange-950/70">
 
               {/* Header / Brand */}
               <div className="text-center mb-6">
                 <div className="flex justify-center mb-4">
                   <div className="relative group">
-                    <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border-2 border-indigo-100 dark:border-slate-700 shadow-md shadow-indigo-100 dark:shadow-none animate-float bg-white dark:bg-slate-800 p-2">
+                    <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border-2 border-orange-200 dark:border-slate-700 shadow-md shadow-orange-200/50 dark:shadow-none animate-float bg-white dark:bg-slate-800 p-2">
                       <img
                         src="/logo.png"
                         alt="IT Borrow Logo"
@@ -285,8 +285,8 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100/80 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-2 shadow-xs">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/60 border border-orange-200/80 dark:border-orange-900 text-orange-700 dark:text-orange-300 text-xs font-semibold mb-2 shadow-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400" />
                   <span>ระบบยืม-คืนอุปกรณ์ไอที</span>
                 </div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white mb-1">
@@ -354,7 +354,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors focus:outline-none cursor-pointer"
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -370,7 +370,7 @@ export default function App() {
                       name="rememberMe"
                       checked={loginForm.rememberMe}
                       onChange={handleLoginChange}
-                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer accent-indigo-600"
+                      className="w-4 h-4 rounded border-orange-300 dark:border-slate-700 text-orange-600 focus:ring-orange-500/20 cursor-pointer accent-orange-600"
                     />
                     <span className="font-medium">จดจำฉันไว้ในระบบ</span>
                   </label>
@@ -380,7 +380,7 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full mt-2 py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98] btn-gradient-primary shadow-indigo-500/20"
+                  className="w-full mt-2 py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98] btn-gradient-primary shadow-orange-500/25"
                 >
                   {isSubmitting ? (
                     <>
@@ -397,12 +397,12 @@ export default function App() {
               </form>
 
               {/* Footer Registration Link */}
-              <div className="mt-5 pt-4 text-center flex items-center justify-center gap-1.5 text-xs sm:text-sm border-t border-slate-100 dark:border-slate-800">
+              <div className="mt-5 pt-4 text-center flex items-center justify-center gap-1.5 text-xs sm:text-sm border-t border-orange-100 dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400">ยังไม่มีบัญชีผู้ใช้งาน?</span>
                 <button
                   type="button"
                   onClick={() => setView('register')}
-                  className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline focus:outline-none transition-colors cursor-pointer"
+                  className="font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:underline focus:outline-none transition-colors cursor-pointer"
                 >
                   สมัครสมาชิกที่นี่
                 </button>

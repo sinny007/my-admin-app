@@ -32,7 +32,7 @@ import { IT_CATEGORIES } from '../constants/itCategories';
 const DEFAULT_API_URL =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbxG9jHtv4457GsbJ0w0xG4_ILq09s_fzMYGB5diMracMOq_abJsW27n2CvXCdVVPngpXw/exec";
+  "https://script.google.com/macros/s/AKfycbz60gtQihat3WVczF81RciBYGvNcOCCUFTQwGh0xVNMaoP4XiBaMw_gYhqfCGHTnS5AEg/exec";
 
 const formatDisplayDate = (dateStr) => {
   if (!dateStr || dateStr === '-') return '-';
@@ -404,13 +404,13 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
 
       {/* ─── Header ───────────────────────────────────────────────── */}
       <header className={`sticky top-0 z-30 backdrop-blur-xl border-b shadow-xs transition-colors ${
-        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200/80'
+        isDark ? 'bg-slate-900/90 border-orange-500/20' : 'bg-white/90 border-orange-200/80'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-2xl overflow-hidden shrink-0 border p-1 shadow-xs ${
-              isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+              isDark ? 'bg-slate-800 border-orange-500/30' : 'bg-white border-orange-200'
             }`}>
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
@@ -419,7 +419,7 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
                 <h1 className="text-base sm:text-lg font-black tracking-tight gradient-text">
                   ระบบยืม-คืนอุปกรณ์ไอที
                 </h1>
-                <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 text-[10px] font-bold">
                   ผู้ใช้งาน
                 </span>
               </div>
@@ -427,11 +427,11 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-3 sm:pt-0 border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-3 sm:pt-0 border-orange-100 dark:border-slate-800">
 
             {/* Loading indicator */}
             {loading && (
-              <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+              <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span className="hidden sm:inline">กำลังซิงค์...</span>
               </div>
@@ -443,8 +443,8 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
               onClick={toggleTheme}
               className={`p-2 rounded-xl border transition-all cursor-pointer shadow-xs ${
                 isDark
-                  ? 'bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+                  ? 'bg-slate-800 border-orange-500/30 text-amber-300 hover:bg-slate-700 hover:border-orange-400'
+                  : 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700'
               }`}
               title={isDark ? "สลับเป็นโหมดสว่าง (Light Mode)" : "สลับเป็นโหมดมืด (Dark Mode)"}
             >
@@ -457,12 +457,12 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
               onClick={() => setIsProfileOpen(true)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer group shadow-xs ${
                 isDark
-                  ? 'bg-slate-800 border-slate-700 hover:border-indigo-500'
-                  : 'bg-slate-50 hover:bg-indigo-50/60 border-slate-200 hover:border-indigo-200'
+                  ? 'bg-slate-800 border-slate-700 hover:border-orange-500'
+                  : 'bg-orange-50/60 hover:bg-orange-100/60 border-orange-200 hover:border-orange-300'
               }`}
               title="แก้ไขข้อมูลโปรไฟล์"
             >
-              <div className="w-7 h-7 rounded-full overflow-hidden border border-indigo-200 dark:border-indigo-700 shrink-0 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+              <div className="w-7 h-7 rounded-full overflow-hidden border border-orange-200 dark:border-orange-700 shrink-0 flex items-center justify-center bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300">
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt="User" className="w-full h-full object-cover" />
                 ) : (
@@ -470,7 +470,7 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
                 )}
               </div>
               <div className="text-xs text-left hidden sm:block">
-                <div className={`font-bold transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400 ${
+                <div className={`font-bold transition-colors group-hover:text-orange-600 dark:group-hover:text-orange-400 ${
                   isDark ? 'text-slate-200' : 'text-slate-800'
                 }`}>
                   {user?.name || user?.username || 'ผู้ใช้งาน'}
@@ -497,15 +497,15 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) 
         {/* ─── Welcome Banner ──────────────────────────────────────── */}
         <div className={`relative rounded-3xl p-6 sm:p-7 border shadow-sm overflow-hidden animate-fade-up ${
           isDark 
-            ? 'bg-gradient-to-r from-indigo-950/60 via-slate-900 to-slate-900 border-indigo-900/60' 
-            : 'bg-gradient-to-r from-indigo-50/90 via-purple-50/80 to-sky-50/80 border-indigo-100/90'
+            ? 'bg-gradient-to-r from-orange-950/40 via-slate-900 to-slate-900 border-orange-900/50' 
+            : 'bg-gradient-to-r from-orange-50/90 via-amber-50/80 to-yellow-50/80 border-orange-200/80'
         }`}>
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border text-xs font-bold mb-2 shadow-xs ${
-                isDark ? 'bg-indigo-900/40 border-indigo-700 text-indigo-300' : 'bg-white/80 border-indigo-100 text-indigo-700'
+                isDark ? 'bg-orange-900/40 border-orange-700 text-orange-300' : 'bg-white/80 border-orange-200 text-orange-700'
               }`}>
-                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                <Sparkles className="w-3.5 h-3.5 text-orange-500" />
                 <span>ยินดีต้อนรับสู่ระบบยืม-คืน</span>
               </div>
               <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>

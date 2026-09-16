@@ -189,35 +189,46 @@ function doPost(e) {
 
 /**
  * POST/GET { action:'login', username, password }
- * ← { success, user:{ username, name, role, department, phone, email, avatarUrl } }
+ * ← { success, user:{ id, username, name, role, department, phone, email, avatarUrl } }
  */
 function handleLogin(p) {
-  const username = String(p.username || '').trim().toLowerCase();
+  const usernameOrId = String(p.username || '').trim().toLowerCase();
   const password = String(p.password !== undefined && p.password !== null ? p.password : '').trim();
 
-  if (!username || !password)
-    return jsonErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+  if (!usernameOrId || !password)
+    return jsonErr('กรุณากรอกชื่อผู้ใช้/รหัสประจำตัว และรหัสผ่าน');
 
-  let users = sheetToObjects(getSheet(SHEET_USERS));
+  const sheet = getSheet(SHEET_USERS);
+  let users = sheetToObjects(sheet);
 
   // Auto-seed default admin user ถ้าชีท Users ยังไม่มีข้อมูลผู้ใช้
   if (users.length === 0) {
-    getSheet(SHEET_USERS).appendRow(['admin', 'admin1234', 'ผู้ดูแลระบบ', 'admin', nowDateTime(), 'ไอที', '', '', '']);
-    users = sheetToObjects(getSheet(SHEET_USERS));
+    const defaultHeaders = ['id', 'username', 'password', 'name', 'role'];
+    sheet.clear();
+    sheet.appendRow(defaultHeaders);
+    sheet.appendRow(['1787631546020', 'Admin', 'admin2412', 'แอดมิน', 'admin']);
+    users = sheetToObjects(sheet);
   }
 
-  const found = users.find(u =>
-    String(u.username || '').trim().toLowerCase() === username &&
-    String(u.password !== undefined && u.password !== null ? u.password : '').trim() === password
-  );
+  const found = users.find(u => {
+    const uName = String(u.username || '').trim().toLowerCase();
+    const uId   = String(u.id !== undefined && u.id !== null ? u.id : '').trim().toLowerCase();
+    const uPass = String(u.password !== undefined && u.password !== null ? u.password : '').trim();
+    return (uName === usernameOrId || uId === usernameOrId) && uPass === password;
+  });
 
-  if (!found) return jsonErr('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  if (!found) return jsonErr('ชื่อผู้ใช้/รหัสประจำตัว หรือรหัสผ่านไม่ถูกต้อง');
+
+  const rawRole = String(found.role || 'user').toLowerCase().trim();
+  // Map student/user -> student/user, admin -> admin
+  const userRole = (rawRole === 'admin') ? 'admin' : (rawRole === 'student' ? 'student' : 'user');
 
   return jsonOk({
     user: {
-      username:   found.username,
-      name:       found.name,
-      role:       String(found.role || 'user').toLowerCase().trim(),
+      id:         found.id || '',
+      username:   found.username || '',
+      name:       found.name || found.username || '',
+      role:       userRole,
       department: found.department || '',
       phone:      found.phone || '',
       email:      found.email || '',
@@ -227,31 +238,62 @@ function handleLogin(p) {
 }
 
 /**
- * POST { action:'register', username, password, name, role, adminKey }
+ * POST { action:'register', id, username, password, name, role, adminKey }
+ * โครงสร้างตาราง: A: id | B: username | C: password | D: name | E: role
  * ← { success, message }
  */
 function handleRegister(p) {
-  const username = String(p.username || '').trim().toLowerCase();
+  const id       = String(p.id || new Date().getTime()).trim();
+  const username = String(p.username || '').trim();
   const password = String(p.password || '').trim();
   const name     = String(p.name     || '').trim();
-  const role     = String(p.role     || 'user').toLowerCase().trim();
+  const rawRole  = String(p.role     || 'student').toLowerCase().trim();
+  const role     = (rawRole === 'admin') ? 'admin' : (rawRole === 'user' ? 'user' : 'student');
   const adminKey = String(p.adminKey || '').trim();
 
   if (!username || !password || !name)
     return jsonErr('กรุณากรอกข้อมูลให้ครบถ้วน');
-  if (username.length < 4)
-    return jsonErr('Username ต้องมีความยาวอย่างน้อย 4 ตัวอักษร');
+  if (username.length < 3)
+    return jsonErr('Username ต้องมีความยาวอย่างน้อย 3 ตัวอักษร');
   if (password.length < 6)
     return jsonErr('Password ต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
   if (role === 'admin' && adminKey !== ADMIN_SECRET_KEY)
     return jsonErr('รหัสลับผู้ดูแลระบบไม่ถูกต้อง');
 
   const sheet = getSheet(SHEET_USERS);
-  const users = sheetToObjects(sheet);
-  if (users.find(u => String(u.username || '').toLowerCase() === username))
-    return jsonErr('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเลือก Username อื่น');
+  const data  = sheet.getDataRange().getValues();
+  let headers = data.length > 0 ? data[0].map(h => String(h).trim()) : [];
 
-  sheet.appendRow([username, password, name, role, nowDateTime(), '', '', '', '']);
+  // ถ้ายังไม่มี header หรือตารางว่าง
+  if (headers.length === 0) {
+    headers = ['id', 'username', 'password', 'name', 'role'];
+    sheet.appendRow(headers);
+  }
+
+  const users = sheetToObjects(sheet);
+  if (users.find(u => String(u.username || '').toLowerCase() === username.toLowerCase()))
+    return jsonErr('ชื่อผู้ใช้ (Username) นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น');
+
+  // จัดเรียงแถวข้อมูลตามตำแหน่ง Headers ในชีทจริงของผู้ใช้
+  const idIdx   = headers.indexOf('id');
+  const uIdx    = headers.indexOf('username');
+  const pIdx    = headers.indexOf('password');
+  const nIdx    = headers.indexOf('name');
+  const rIdx    = headers.indexOf('role');
+
+  if (idIdx !== -1 && uIdx !== -1 && pIdx !== -1 && nIdx !== -1 && rIdx !== -1) {
+    const newRow = new Array(headers.length).fill('');
+    newRow[idIdx] = id;
+    newRow[uIdx]  = username;
+    newRow[pIdx]  = password;
+    newRow[nIdx]  = name;
+    newRow[rIdx]  = role;
+    sheet.appendRow(newRow);
+  } else {
+    // โครงสร้างมาตรฐานตามภาพ: A: id | B: username | C: password | D: name | E: role
+    sheet.appendRow([id, username, password, name, role]);
+  }
+
   return jsonOk({ message: 'สมัครสมาชิกสำเร็จ ยินดีต้อนรับคุณ ' + name });
 }
 
