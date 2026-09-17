@@ -32,7 +32,7 @@ import { IT_CATEGORIES } from '../constants/itCategories';
 const DEFAULT_API_URL =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbxjMy2NzVzuWIBlobYAeyBD92PYUQUoxu6n0oF4ReWN91zE9FM7BwrsKuEzWM2ubALIQA/exec";
+  "https://script.google.com/macros/s/AKfycbxL2D5nEKU--1xl_aRcATdmUJYLl0onhvBjUup8Mwtregmt34cSVavRuE0xx_qAiVf27A/exec";
 
 const formatDisplayDate = (dateStr) => {
   if (!dateStr || dateStr === '-') return '-';
