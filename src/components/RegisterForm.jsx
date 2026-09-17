@@ -19,7 +19,9 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxL2D5nEKU--1xl_aRcATdmUJYLl0onhvBjUup8Mwtregmt34cSVavRuE0xx_qAiVf27A/exec";
+  import.meta.env?.VITE_APPS_SCRIPT_URL ||
+  "https://script.google.com/macros/s/AKfycbzj6oXUlGnNKe2P_cnDIciWHWVQXwWtAMS7F-ZywIcqGp6IIXXGRve9ANIn8c3znaoujw/exec";
+
 export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUrl }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
 
