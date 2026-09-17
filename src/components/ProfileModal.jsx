@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   User,
   Mail,
@@ -13,13 +13,19 @@ import {
 import { toast } from 'sonner';
 
 export default function ProfileModal({ isOpen, onClose, user, onUpdateUser, apiUrl }) {
-  const [profileData, setProfileData] = useState({
-    name: '', department: '', phone: '', email: '', avatarUrl: ''
-  });
+  const [profileData, setProfileData] = useState(() => ({
+    name: user?.name || '',
+    department: user?.department || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    avatarUrl: user?.avatarUrl || ''
+  }));
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user && isOpen) {
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen && user) {
       setProfileData({
         name: user.name || '',
         department: user.department || '',
@@ -28,7 +34,7 @@ export default function ProfileModal({ isOpen, onClose, user, onUpdateUser, apiU
         avatarUrl: user.avatarUrl || ''
       });
     }
-  }, [user, isOpen]);
+  }
 
   if (!isOpen) return null;
 

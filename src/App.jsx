@@ -11,7 +11,7 @@ const RegisterForm = lazy(() => import('./components/RegisterForm'));
 
 const API_URL =
   import.meta.env?.VITE_APPS_SCRIPT_URL ||
-  "https://script.google.com/macros/s/AKfycbyizcvNesWFWqfBt41WI56A-D0XOaeTspGUJwWV7ua2lE4R3bA1r332A86DSl4yeVwSOw/exec";
+  "https://script.google.com/macros/s/AKfycbyAreLGZy3v-mmQZ-i77mc43ZPx0yYeMs5qjOOAJp4Ku9qY5z0hXccX-_-tvhhDzzYLtQ/exec";
 
 export default function App() {
   // Theme state

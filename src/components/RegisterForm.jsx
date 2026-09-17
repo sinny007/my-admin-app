@@ -21,8 +21,7 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwA66XUbmTHpcddoy_cIMor0sIFg5hM6uO4kdx2Br2ku0W1eUT8wsbEnIYgvCZcCjt4QQ/exec";
-
+  "https://script.google.com/macros/s/AKfycby1Dncogs2o7dyDVXzi18d7GHQFnmt0f-otQb5AVxjZPJRAq62t3Q4J1FMjSRev_6uuDw/exec";
 export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUrl }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
 
@@ -33,7 +32,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
     username: '',
     password: '',
     name: '',
-    role: 'user', // 'user' หรือ 'admin'
+    role: 'student', // 'student' หรือ 'staff'
     adminKey: ''
   });
 
@@ -53,20 +52,17 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: value };
-      if (name === 'role' && value !== 'admin') {
-        updated.adminKey = '';
-      }
-      return updated;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSelectRole = (selectedRole) => {
     setFormData((prev) => ({
       ...prev,
       role: selectedRole,
-      adminKey: selectedRole === 'admin' ? prev.adminKey : ''
+      adminKey: ''
     }));
   };
 
@@ -129,12 +125,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
       return;
     }
 
-    if (formData.role === 'admin' && !trimmedAdminKey) {
-      const err = 'กรุณากรอกรหัสลับผู้ดูแลระบบ (Admin Key)';
-      setMessage({ type: 'error', text: err });
-      toast.error(err);
-      return;
-    }
+    // ไม่มีการตรวจสอบ Admin Key แล้ว (ไม่มีโรล admin ในการสมัคร)
 
     setLoading(true);
 
@@ -145,11 +136,12 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
         password: trimmedPassword,
         name: trimmedName,
         role: formData.role,
-        adminKey: formData.role === 'admin' ? trimmedAdminKey : ''
+        adminKey: ''
       };
 
       // ยิง API ไปยัง Google Apps Script (ส่งแบบ text/plain เพื่อเลี่ยงการติด Preflight CORS)
-      if (!APPS_SCRIPT_URL || !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(APPS_SCRIPT_URL)) {
+      const cleanUrl = String(APPS_SCRIPT_URL || '').trim();
+      if (!cleanUrl || !cleanUrl.startsWith('http')) {
         throw new Error('ไม่พบ URL ของ Google Apps Script Web App ที่ถูกต้อง');
       }
 
@@ -158,7 +150,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
 
       let response;
       try {
-        response = await fetch(APPS_SCRIPT_URL, {
+        response = await fetch(cleanUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'text/plain;charset=utf-8'
@@ -176,7 +168,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
 
       try {
         result = JSON.parse(rawText);
-      } catch (parseErr) {
+      } catch {
         console.error('Register API raw response:', rawText);
         throw new Error(
           response.ok
@@ -200,14 +192,16 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
             origin: { y: 0.6 },
             colors: ['#ea580c', '#f97316', '#fb923c', '#f59e0b', '#10b981', '#ffffff']
           });
-        } catch (_) {}
+        } catch {
+          // ignore confetti error
+        }
         
         // ล้างฟอร์ม
         setFormData({
           username: '',
           password: '',
           name: '',
-          role: 'user',
+          role: 'student',
           adminKey: ''
         });
 
@@ -291,8 +285,8 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             {currentStep === 1 
-              ? 'ขั้นตอนที่ 1: เลือกประเภทบัญชีผู้ใช้งานที่ต้องการสมัคร' 
-              : `ขั้นตอนที่ 2: กรอกข้อมูลส่วนตัวสำหรับ (${formData.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้ทั่วไป'})`}
+              ? 'ขั้นตอนที่ 1: เลือกประเภทบัญชีที่ต้องการสมัคร' 
+              : `ขั้นตอนที่ 2: กรอกข้อมูลส่วนตัวสำหรับ (${formData.role === 'staff' ? 'บุคลากร' : 'นักศึกษา'})`}
           </p>
 
           {/* Stepper Bar */}
@@ -350,16 +344,16 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
           <div className="space-y-4 animate-scale-in">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               
-              {/* Card User */}
+              {/* Card นักศึกษา */}
               <div 
-                onClick={() => handleSelectRole('user')}
+                onClick={() => handleSelectRole('student')}
                 className={`relative p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left flex flex-col justify-between ${
-                  formData.role === 'user'
+                  formData.role === 'student'
                     ? 'bg-orange-50/90 dark:bg-orange-950/30 border-orange-500 ring-2 ring-orange-500/20 shadow-md shadow-orange-500/10'
                     : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-orange-300 hover:bg-orange-50/30 dark:hover:bg-slate-800'
                 }`}
               >
-                {formData.role === 'user' && (
+                {formData.role === 'student' && (
                   <div className="absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-orange-600 text-white flex items-center justify-center shadow-xs animate-scale-in">
                     <Check className="w-3.5 h-3.5" />
                   </div>
@@ -369,10 +363,10 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
                     <User className="w-6 h-6" />
                   </div>
                   <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                    ผู้ใช้ทั่วไป (User)
+                    นักศึกษา
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    สำหรับนักศึกษาและบุคคลทั่วไป ขอยืมอุปกรณ์ไอที ตรวจสอบสถานะการยืม และประวัติการใช้งาน
+                    สำหรับนักศึกษา ขอยืมอุปกรณ์ไอที ตรวจสอบสถานะการยืม และดูประวัติการใช้งาน
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-orange-100 dark:border-slate-700/60 flex items-center gap-1.5 text-[11px] font-semibold text-orange-700 dark:text-orange-300">
@@ -381,16 +375,16 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
                 </div>
               </div>
 
-              {/* Card Admin */}
+              {/* Card บุคลากร */}
               <div 
-                onClick={() => handleSelectRole('admin')}
+                onClick={() => handleSelectRole('staff')}
                 className={`relative p-5 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left flex flex-col justify-between ${
-                  formData.role === 'admin'
+                  formData.role === 'staff'
                     ? 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-500 ring-2 ring-amber-500/20 shadow-md shadow-amber-500/10'
                     : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-amber-300 hover:bg-amber-50/30 dark:hover:bg-slate-800'
                 }`}
               >
-                {formData.role === 'admin' && (
+                {formData.role === 'staff' && (
                   <div className="absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-xs animate-scale-in">
                     <Check className="w-3.5 h-3.5" />
                   </div>
@@ -400,15 +394,15 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
                     <Shield className="w-6 h-6" />
                   </div>
                   <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                    ผู้ดูแลระบบ (Admin)
+                    บุคลากร
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    สำหรับเจ้าหน้าที่ดูแลระบบ จัดการทะเบียนอุปกรณ์ไอที อนุมัติการยืม-คืน จัดการสถิติและรายงาน
+                    สำหรับอาจารย์ เจ้าหน้าที่ และบุคลากรของสถาบัน ยืม-คืนอุปกรณ์ไอทีและติดตามสถานะ
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-amber-100 dark:border-slate-700/60 flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>ต้องใช้ Admin Secret Key</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>สมัครง่าย ไม่ต้องใช้รหัสลับ</span>
                 </div>
               </div>
 
@@ -421,7 +415,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
                 onClick={handleNextStep}
                 className="w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-[0.98] bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg shadow-orange-500/25"
               >
-                <span>ไปกรอกข้อมูลต่อ ({formData.role === 'admin' ? 'Admin' : 'User'})</span>
+                <span>ไปกรอกข้อมูลต่อ ({formData.role === 'staff' ? 'บุคลากร' : 'นักศึกษา'})</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -436,16 +430,16 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
             <div className="flex items-center justify-between p-3 rounded-2xl bg-orange-50/90 dark:bg-orange-950/40 border border-orange-200/90 dark:border-orange-900/70">
               <div className="flex items-center gap-2">
                 <div className={`p-1.5 rounded-xl ${
-                  formData.role === 'admin' 
+                  formData.role === 'staff' 
                     ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300' 
                     : 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300'
                 }`}>
-                  {formData.role === 'admin' ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                  {formData.role === 'staff' ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
                 </div>
                 <div className="text-xs">
                   <span className="text-slate-500 dark:text-slate-400">ประเภทบัญชีที่เลือก: </span>
                   <span className="font-extrabold text-orange-900 dark:text-orange-200">
-                    {formData.role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'ผู้ใช้ทั่วไป (General User)'}
+                    {formData.role === 'staff' ? 'บุคลากร' : 'นักศึกษา'}
                   </span>
                 </div>
               </div>
@@ -544,40 +538,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
               )}
             </div>
 
-            {/* Admin Key (Only for Admin Role) */}
-            {formData.role === 'admin' && (
-              <div className="p-4 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 rounded-2xl space-y-2 animate-scale-in">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
-                  <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <span>รหัสลับสำหรับผู้ดูแลระบบ (Admin Secret Key)</span>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-amber-500">
-                    <KeyRound className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showAdminKey ? "text" : "password"}
-                    name="adminKey"
-                    value={formData.adminKey}
-                    onChange={handleChange}
-                    placeholder="กรอกรหัสยืนยันสิทธิ์ Admin"
-                    className="w-full pl-10 pr-11 py-2 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-xl text-slate-800 dark:text-slate-200 placeholder-amber-400/70 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition duration-200 text-sm font-medium"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminKey(!showAdminKey)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-800 transition-colors focus:outline-none cursor-pointer"
-                    tabIndex={-1}
-                  >
-                    {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                  * ต้องระบุรหัสผ่านลับของผู้ดูแลระบบที่ได้รับอนุญาตเท่านั้น
-                </p>
-              </div>
-            )}
+            {/* ไม่มีช่อง Admin Key แล้ว — ทั้งนักศึกษาและบุคลากรสมัครได้โดยตรง */}
 
             {/* Buttons */}
             <div className="pt-2 flex items-center gap-3">
