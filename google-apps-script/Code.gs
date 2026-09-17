@@ -1,19 +1,33 @@
 /**
  * ============================================================
  *  IT Equipment Borrow System — Google Apps Script Backend
- *  Version: 2.1 (Profile & Password Update + Thai IT Categories)
+ *  Version: 2.2 (Fixed: column-name-safe writes + login hardening)
  *  เชื่อมต่อกับ React Frontend ผ่าน Fetch API
  * ============================================================
  *
- *  📋 โครงสร้าง Google Sheets ที่รองรับ:
+ *  🩹 สิ่งที่แก้ไขจากเวอร์ชัน 2.1:
+ *  1. handleBorrowDevice() เดิมเขียนแถวใหม่ลง Transactions โดยอิง "ตำแหน่งคอลัมน์"
+ *     แบบตายตัว ซึ่งไม่ตรงกับคอลัมน์จริงในชีท (id|deviceId|deviceName|userId|
+ *     username|borrowDate|expectedReturnDate|returnDate|status|userRole)
+ *     ทำให้ข้อมูลเพี้ยน/สลับคอลัมน์ในบางแถว (ดูตัวอย่างแถวที่ borrowDate
+ *     กลายเป็นคำว่า "student") — ตอนนี้เปลี่ยนเป็นการ "หา column index จากชื่อ
+ *     header จริงในชีท" แล้วค่อยเขียนค่าลงตำแหน่งที่ถูกต้อง เหมือนที่
+ *     handleRegister() ทำกับชีท Users อยู่แล้ว ผลคือแถวเก่ากับแถวใหม่จะมี
+ *     โครงสร้างตรงกันเสมอไม่ว่าจะสลับคอลัมน์ยังไงในอนาคต
+ *  2. handleLogin() เดิมถ้าในคอลัมน์ username เก็บค่า "-" (เว้นว่างแบบมีขีด)
+ *     จะถือเป็นค่าจริง ทำให้เทียบชื่อผู้ใช้ผิดพลาดได้ในบางกรณี ตอนนี้ปรับให้
+ *     ถือว่า "-" หรือค่าว่าง = ไม่มี username ตั้งไว้ แล้ว fallback ไปที่คอลัมน์
+ *     ID/ชื่อ (คอลัมน์ "user") แทนเหมือนเดิม — ผู้ใช้ที่มีอยู่แล้วยัง login
+ *     ได้เหมือนเดิมทุกคน ไม่ต้องแก้ชีท Users เลย
+ *
+ *  📋 โครงสร้าง Google Sheets ที่รองรับ (ยืดหยุ่นตามชื่อ header จริงในชีท):
  *  ┌─────────────────┬──────────────────────────────────────────────────────────────────┐
  *  │ Sheet Name      │ Columns (Header Row 1)                                           │
  *  ├─────────────────┼──────────────────────────────────────────────────────────────────┤
- *  │ Users           │ username | password | name | role | createdAt |                  │
- *  │                 │ department | phone | email | avatarUrl                           │
+ *  │ Users           │ id/user | username | password | role | ... (ยืดหยุ่นตามที่มีจริง) │
  *  │ Devices         │ id | name | category | status | imageUrl | createdAt             │
- *  │ Transactions    │ id | deviceId | deviceName | username | name | borrowDate |       │
- *  │                 │ expectedReturnDate | returnDate | status | condition | note       │
+ *  │ Transactions    │ id | deviceId | deviceName | userId | username | borrowDate |     │
+ *  │                 │ expectedReturnDate | returnDate | status | userRole               │
  *  │ BorrowRecords   │ id | borrowerName | itemName | borrowDate | returnDate | status  │
  *  └─────────────────┴──────────────────────────────────────────────────────────────────┘
  *
@@ -57,8 +71,9 @@ function getSheet(name) {
     const headers = {
       [SHEET_USERS]:        ['id', 'username', 'password', 'name', 'role', 'createdAt', 'department', 'phone', 'email', 'avatarUrl'],
       [SHEET_DEVICES]:      ['id', 'name', 'category', 'status', 'imageUrl', 'createdAt'],
-      [SHEET_TRANSACTIONS]: ['id', 'deviceId', 'deviceName', 'username', 'name', 'borrowDate',
-                             'expectedReturnDate', 'returnDate', 'status', 'condition', 'note'],
+      // ปรับ default header ให้ตรงกับโครงสร้างจริงที่ใช้งานอยู่ (มี userId/userRole แทน name/condition/note)
+      [SHEET_TRANSACTIONS]: ['id', 'deviceId', 'deviceName', 'userId', 'username', 'borrowDate',
+                             'expectedReturnDate', 'returnDate', 'status', 'userRole'],
       [SHEET_BORROW]:       ['id', 'borrowerName', 'itemName', 'borrowDate', 'returnDate', 'status'],
     };
     if (headers[name]) {
@@ -95,6 +110,8 @@ function sheetToObjects(sheet) {
       if (normKey === 'imageurl' || normKey === 'image') obj.imageUrl = formattedVal;
       if (normKey === 'deviceid') obj.deviceId = formattedVal;
       if (normKey === 'devicename') obj.deviceName = formattedVal;
+      if (normKey === 'userid') obj.userId = formattedVal;
+      if (normKey === 'userrole') obj.userRole = formattedVal;
       if (normKey === 'expectedreturndate') obj.expectedReturnDate = formattedVal;
       if (normKey === 'returndate') obj.returnDate = formattedVal;
       if (normKey === 'borrowdate') obj.borrowDate = formattedVal;
@@ -117,6 +134,41 @@ function findColIndex(headers, candidates) {
     }
   }
   return -1;
+}
+
+// ─── Helper: ถือว่า "-" หรือค่าว่างคือ "ไม่มีค่า" (ใช้กับ username ที่กรอกขีดไว้) ─
+function normBlank(v) {
+  const s = String(v === undefined || v === null ? '' : v).trim();
+  return (s === '' || s === '-') ? '' : s;
+}
+
+// ─── Helper: ค้นหา id/role ของผู้ใช้จากชีท Users โดยใช้ username หรือ id ─────
+// ใช้เป็น fallback เวลา Frontend ไม่ได้ส่ง userId/userRole มาด้วยตอนยืมอุปกรณ์
+function lookupUserInfo(usernameOrId) {
+  const target = String(usernameOrId || '').trim().toLowerCase();
+  if (!target) return null;
+
+  const sheet = getSheet(SHEET_USERS);
+  const data  = sheet.getDataRange().getValues();
+  if (data.length < 2) return null;
+
+  const headers = data[0].map(h => String(h).trim());
+  const uIdx    = findColIndex(headers, ['username', 'user_name', 'loginname']);
+  const idIdx   = findColIndex(headers, ['id', 'userid', 'user']);
+  const roleIdx = findColIndex(headers, ['role', 'userrole']);
+
+  for (let i = 1; i < data.length; i++) {
+    const row   = data[i];
+    const uname = uIdx  !== -1 ? normBlank(row[uIdx]).toLowerCase()  : '';
+    const idval = idIdx !== -1 ? normBlank(row[idIdx]).toLowerCase() : '';
+    if (uname === target || idval === target) {
+      return {
+        id:   idIdx   !== -1 ? String(row[idIdx]   || '') : '',
+        role: roleIdx !== -1 ? String(row[roleIdx] || '').trim().toLowerCase() : ''
+      };
+    }
+  }
+  return null;
 }
 
 // ─── Helper: สร้าง ID แบบ UUID สั้น ───────────────────────────────────────
@@ -276,16 +328,16 @@ function handleLogin(p) {
 
   for (let i = 1; i < displayData.length; i++) {
     const row = displayData[i];
-    // ค้นหา username จาก username column ก่อน
-    const uName  = safeUIdx !== -1 ? String(row[safeUIdx] || '').trim().toLowerCase() : '';
+    // ค้นหา username จาก username column ก่อน — ถือว่า "-" หรือค่าว่าง = ยังไม่ได้ตั้ง username
+    const uName  = safeUIdx !== -1 ? normBlank(row[safeUIdx]).toLowerCase() : '';
     // ค้นหา ID: ถ้า idIdx ชนกับ uIdx ให้ skip (เพราะนั่นคือ column เดียวกัน)
-    const uId    = (idIdx !== -1 && idIdx !== safeUIdx) ? String(row[idIdx] || '').trim().toLowerCase() : '';
-    const uEmail = emailIdx !== -1 ? String(row[emailIdx] || '').trim().toLowerCase() : '';
-    const uPhone = phoneIdx !== -1 ? String(row[phoneIdx] || '').trim().replace(/[-\s]/g, '') : '';
+    const uId    = (idIdx !== -1 && idIdx !== safeUIdx) ? normBlank(row[idIdx]).toLowerCase() : '';
+    const uEmail = emailIdx !== -1 ? normBlank(row[emailIdx]).toLowerCase() : '';
+    const uPhone = phoneIdx !== -1 ? normBlank(row[phoneIdx]).replace(/[-\s]/g, '') : '';
     const uPass  = safePIdx !== -1 ? String(row[safePIdx] || '').trim() : '';
 
     const isMatchUser = (
-      uName === usernameOrId ||
+      (uName && uName === usernameOrId) ||
       (uId && uId === usernameOrId) ||
       (uEmail && uEmail === usernameOrId) ||
       (uPhone && uPhone === cleanInput)
@@ -361,7 +413,7 @@ function handleRegister(p) {
   if (uColIdx === -1) uColIdx = findColIndex(headers, ['user', 'ชื่อผู้ใช้']);
   if (uColIdx !== -1) {
     for (let i = 1; i < displayData.length; i++) {
-      if (String(displayData[i][uColIdx] || '').trim().toLowerCase() === username.toLowerCase()) {
+      if (normBlank(displayData[i][uColIdx]).toLowerCase() === username.toLowerCase()) {
         return jsonErr('ชื่อผู้ใช้ (Username) นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น');
       }
     }
@@ -436,7 +488,7 @@ function handleUpdateProfile(p) {
   let userRole = 'user';
 
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][uIdx]).trim().toLowerCase() === username) {
+    if (normBlank(data[i][uIdx]).toLowerCase() === username) {
       foundRow = i + 1;
       userRole = roleIdx !== -1 ? String(data[i][roleIdx] || 'user') : 'user';
       break;
@@ -488,7 +540,7 @@ function handleChangePassword(p) {
   if (uIdx === -1 || pIdx === -1) return jsonErr('ไม่พบคอลัมน์ username หรือ password ในชีท');
 
   for (let i = 1; i < displayData.length; i++) {
-    if (String(displayData[i][uIdx]).trim().toLowerCase() === username) {
+    if (normBlank(displayData[i][uIdx]).toLowerCase() === username) {
       const dbPassword = String(displayData[i][pIdx]).trim();
       if (dbPassword !== currentPassword) {
         return jsonErr('รหัสผ่านเดิมไม่ถูกต้อง');
@@ -566,14 +618,20 @@ function handleDeleteDevice(p) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * POST { action:'borrowDevice', deviceId, deviceName, username, name, expectedReturnDate }
+ * POST { action:'borrowDevice', deviceId, deviceName, username, name, userId, userRole, expectedReturnDate }
  * ← { success, message, transId }
+ *
+ * 🩹 เขียนแถวใหม่ลง Transactions โดย "หา column index จากชื่อ header จริงในชีท"
+ *    แทนการเขียนตามตำแหน่งตายตัว เพื่อป้องกันข้อมูลเพี้ยน/สลับคอลัมน์
+ *    เหมือนที่เคยเกิดขึ้นกับแถวเก่า (ดูคอมเมนต์ด้านบนไฟล์)
  */
 function handleBorrowDevice(p) {
   const deviceId           = String(p.deviceId           || '').trim();
   const deviceName         = String(p.deviceName         || '').trim();
   const username           = String(p.username           || '').trim();
   const name               = String(p.name               || username).trim();
+  const userId             = String(p.userId             || '').trim();
+  const userRole           = String(p.userRole           || '').trim();
   const expectedReturnDate = String(p.expectedReturnDate || '').trim();
 
   if (!deviceId || !username || !expectedReturnDate)
@@ -586,9 +644,12 @@ function handleBorrowDevice(p) {
   const dIdIdx   = findColIndex(devHead, ['id', 'deviceid', 'รหัส', 'รหัสอุปกรณ์']);
   const dStIdx   = findColIndex(devHead, ['status', 'สถานะ']);
   let devRowIdx  = -1;
+  let actualDeviceName = deviceName; // เผื่อ Frontend ไม่ได้ส่ง deviceName มา จะไปดึงจากชีท Devices แทน
 
   if (dIdIdx === -1 || dStIdx === -1)
     return jsonErr('โครงสร้างคอลัมน์ชีท Devices ไม่ถูกต้อง (ไม่พบ id หรือ status)');
+
+  const dNameIdxDev = findColIndex(devHead, ['name', 'devicename']);
 
   for (let i = 1; i < devData.length; i++) {
     if (String(devData[i][dIdIdx]).trim() === deviceId) {
@@ -596,6 +657,9 @@ function handleBorrowDevice(p) {
       if (currentStatus !== 'พร้อมใช้งาน')
         return jsonErr('อุปกรณ์ไม่พร้อมใช้งาน (สถานะ: ' + currentStatus + ')');
       devRowIdx = i + 1;
+      if (!actualDeviceName && dNameIdxDev !== -1) {
+        actualDeviceName = String(devData[i][dNameIdxDev] || '');
+      }
       break;
     }
   }
@@ -605,14 +669,48 @@ function handleBorrowDevice(p) {
   // อัปเดตสถานะอุปกรณ์
   devSheet.getRange(devRowIdx, dStIdx + 1).setValue('ถูกยืม');
 
-  // บันทึก Transaction
-  const transId = generateId('TXN');
-  getSheet(SHEET_TRANSACTIONS).appendRow([
-    transId, deviceId, deviceName, username, name,
-    todayDate(), expectedReturnDate, '', 'borrowed', '', ''
-  ]);
+  // ── เติม userId/userRole อัตโนมัติจากชีท Users ถ้า Frontend ไม่ได้ส่งมา ──
+  const userInfo      = lookupUserInfo(username);
+  const finalUserId   = userId   || (userInfo ? userInfo.id   : '') || username;
+  const finalUserRole = userRole || (userInfo ? userInfo.role : '');
 
-  return jsonOk({ message: 'ยืม "' + deviceName + '" เรียบร้อยแล้ว', transId: transId });
+  // ── บันทึก Transaction: อิงชื่อ header จริงในชีท ไม่ใช่ตำแหน่งตายตัว ──
+  const txSheet      = getSheet(SHEET_TRANSACTIONS);
+  const txHeadersRaw = txSheet.getDataRange().getValues()[0].map(h => String(h).trim());
+  const transId       = generateId('TXN');
+
+  const idIdx2    = findColIndex(txHeadersRaw, ['id', 'transid']);
+  const devIdIdx  = findColIndex(txHeadersRaw, ['deviceid']);
+  const devNmIdx  = findColIndex(txHeadersRaw, ['devicename']);
+  const userIdIdx = findColIndex(txHeadersRaw, ['userid']);
+  const userNmIdx = findColIndex(txHeadersRaw, ['username']);
+  const nameIdx2  = findColIndex(txHeadersRaw, ['name']); // เฉพาะชีทรุ่นเก่าที่มีคอลัมน์ name แยกจาก username
+  const bdIdx     = findColIndex(txHeadersRaw, ['borrowdate']);
+  const erdIdx    = findColIndex(txHeadersRaw, ['expectedreturndate']);
+  const rdIdx     = findColIndex(txHeadersRaw, ['returndate']);
+  const stIdx2    = findColIndex(txHeadersRaw, ['status']);
+  const roleIdx2  = findColIndex(txHeadersRaw, ['userrole', 'role']);
+  const condIdx   = findColIndex(txHeadersRaw, ['condition']);
+  const noteIdx   = findColIndex(txHeadersRaw, ['note']);
+
+  const newRow = new Array(txHeadersRaw.length).fill('');
+  if (idIdx2    !== -1) newRow[idIdx2]    = transId;
+  if (devIdIdx  !== -1) newRow[devIdIdx]  = deviceId;
+  if (devNmIdx  !== -1) newRow[devNmIdx]  = actualDeviceName;
+  if (userIdIdx !== -1) newRow[userIdIdx] = finalUserId;
+  if (userNmIdx !== -1) newRow[userNmIdx] = username;
+  if (nameIdx2  !== -1) newRow[nameIdx2]  = name;
+  if (bdIdx     !== -1) newRow[bdIdx]     = nowDateTime();   // ← เดิมใช้ todayDate() ทำให้ไม่มีเวลา
+  if (erdIdx    !== -1) newRow[erdIdx]    = expectedReturnDate;
+  if (rdIdx     !== -1) newRow[rdIdx]     = '';
+  if (stIdx2    !== -1) newRow[stIdx2]    = 'borrowed';
+  if (roleIdx2  !== -1) newRow[roleIdx2]  = finalUserRole;
+  if (condIdx   !== -1) newRow[condIdx]   = '';
+  if (noteIdx   !== -1) newRow[noteIdx]   = '';
+
+  txSheet.appendRow(newRow);
+
+  return jsonOk({ message: 'ยืม "' + actualDeviceName + '" เรียบร้อยแล้ว', transId: transId });
 }
 
 /**
@@ -628,7 +726,7 @@ function handleReturnDevice(p) {
   if (!transId || !deviceId)
     return jsonErr('ข้อมูลไม่ครบถ้วน: transId, deviceId');
 
-  // อัปเดต Transaction
+  // อัปเดต Transaction (เขียนด้วย getRange/setValue ตาม column index ที่หาจาก header อยู่แล้ว จึงปลอดภัย)
   const txSheet = getSheet(SHEET_TRANSACTIONS);
   const txData  = txSheet.getDataRange().getValues();
   const txHead  = txData[0].map(h => String(h).trim());
@@ -641,7 +739,7 @@ function handleReturnDevice(p) {
 
   for (let i = 1; i < txData.length; i++) {
     if (String(txData[i][txIdIdx]).trim() === transId) {
-      if (retIdx !== -1) txSheet.getRange(i + 1, retIdx + 1).setValue(todayDate());
+      if (retIdx !== -1) txSheet.getRange(i + 1, retIdx + 1).setValue(nowDateTime()); // ← เดิมใช้ todayDate() ทำให้ไม่มีเวลา
       if (stIdx !== -1)  txSheet.getRange(i + 1, stIdx  + 1).setValue('returned');
       if (coIdx !== -1)  txSheet.getRange(i + 1, coIdx  + 1).setValue(condition);
       if (noIdx !== -1)  txSheet.getRange(i + 1, noIdx  + 1).setValue(note);
@@ -728,6 +826,134 @@ function handleReturnBorrowRecord(p) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  🩹 One-time Repair: แก้ format วันที่เก่าให้ตรงกับแถวปกติ + เติม userRole ที่หาย
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * รันฟังก์ชันนี้ "ครั้งเดียว" จาก Apps Script Editor (เลือกชื่อฟังก์ชันนี้ในดรอปดาวน์
+ * ด้านบน แล้วกด Run) เพื่อ:
+ *  1. แปลง borrowDate / expectedReturnDate / returnDate ที่มี format แปลกๆ
+ *     (เช่น "2/9/2026, 9:48:00" จากแถวเก่าที่เพี้ยน) ให้เป็น "yyyy-MM-dd HH:mm:ss"
+ *     แบบเดียวกับแถวอื่นๆ ทั้งหมด — แถวที่ format ถูกอยู่แล้วจะไม่ถูกแตะต้อง
+ *  2. เติมคอลัมน์ userRole ที่ว่าง/เป็น "-" โดยไปค้นหา role ของ username นั้นๆ
+ *     จากชีท Users แล้วเติมกลับให้อัตโนมัติ
+ * ไม่กระทบข้อมูลแถวที่ถูกต้องอยู่แล้ว และไม่ลบข้อมูลใดๆ ทั้งสิ้น
+ */
+function repairTransactionsSheet() {
+  const sheet = getSheet(SHEET_TRANSACTIONS);
+  const data  = sheet.getDataRange().getValues();
+  if (data.length < 2) {
+    Logger.log('ไม่มีข้อมูลใน Transactions ให้ซ่อม');
+    return;
+  }
+  const headers = data[0].map(h => String(h).trim());
+
+  const bdIdx   = findColIndex(headers, ['borrowdate']);
+  const erdIdx  = findColIndex(headers, ['expectedreturndate']);
+  const rdIdx   = findColIndex(headers, ['returndate']);
+  const unIdx   = findColIndex(headers, ['username']);
+  const roleIdx = findColIndex(headers, ['userrole', 'role']);
+
+  const userRoleMap = buildUserRoleMap();
+
+  let dateFixCount = 0;
+  let roleFixCount = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+
+    // ── 1) เติม userRole ที่ว่าง/เป็น "-" ──
+    if (roleIdx !== -1) {
+      const curRole = normBlank(row[roleIdx]);
+      if (!curRole) {
+        const uname = unIdx !== -1 ? String(row[unIdx] || '').trim().toLowerCase() : '';
+        const role  = uname ? userRoleMap[uname] : '';
+        if (role) {
+          sheet.getRange(i + 1, roleIdx + 1).setValue(role);
+          roleFixCount++;
+        }
+      }
+    }
+
+    // ── 2) ปรับ format วันที่ให้ตรงกับแถวปกติ ──
+    [bdIdx, erdIdx, rdIdx].forEach(function(idx) {
+      if (idx === -1) return;
+      const raw = row[idx];
+      const fixed = normalizeDateCell(raw);
+      if (fixed && fixed !== String(raw)) {
+        sheet.getRange(i + 1, idx + 1).setValue(fixed);
+        dateFixCount++;
+      }
+    });
+  }
+
+  Logger.log('=== ซ่อมข้อมูลเสร็จสิ้น ===');
+  Logger.log('แก้ format วันที่ไป: ' + dateFixCount + ' ช่อง');
+  Logger.log('เติม userRole ไป: ' + roleFixCount + ' แถว');
+}
+
+/** สร้าง map username/id (lowercase) → role จากชีท Users */
+function buildUserRoleMap() {
+  const sheet = getSheet(SHEET_USERS);
+  const data  = sheet.getDataRange().getValues();
+  const map   = {};
+  if (data.length < 2) return map;
+
+  const headers = data[0].map(h => String(h).trim());
+  const uIdx    = findColIndex(headers, ['username', 'user_name', 'loginname']);
+  const idIdx   = findColIndex(headers, ['id', 'userid', 'user']);
+  const roleIdx = findColIndex(headers, ['role', 'userrole']);
+
+  for (let i = 1; i < data.length; i++) {
+    const row  = data[i];
+    const role = roleIdx !== -1 ? String(row[roleIdx] || '').trim().toLowerCase() : '';
+    if (!role) continue;
+    const uname = uIdx  !== -1 ? normBlank(row[uIdx]).toLowerCase()  : '';
+    const idval = idIdx !== -1 ? normBlank(row[idIdx]).toLowerCase() : '';
+    if (uname) map[uname] = role;
+    if (idval) map[idval] = role;
+  }
+  return map;
+}
+
+/**
+ * แปลงค่าวันที่/เวลาที่เขียนไว้แปลกๆ ให้เป็น "yyyy-MM-dd HH:mm:ss" แบบเดียวกับแถวปกติ
+ * รองรับรูปแบบ "D/M/YYYY, H:mm:ss" (locale ไทย วัน/เดือน/ปี) ที่เจอในแถวข้อมูลเพี้ยน
+ * คืนค่าว่าง '' ถ้าตีความไม่ได้ (จะไม่แตะต้องเซลล์เดิม)
+ */
+function normalizeDateCell(raw) {
+  if (raw === '' || raw === null || raw === undefined) return '';
+  let d;
+
+  if (raw instanceof Date) {
+    d = raw;
+  } else {
+    const s = String(raw).trim();
+    if (!s) return '';
+    // ถ้าเป็น "yyyy-MM-dd" หรือ "yyyy-MM-dd HH:mm:ss" อยู่แล้ว ถือว่าถูก format แล้ว ไม่ต้องแก้
+    if (/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/.test(s)) return '';
+
+    // รูปแบบ "D/M/YYYY, H:mm:ss" หรือ "D/M/YYYY H:mm"
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (m) {
+      const day   = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10);
+      const year  = parseInt(m[3], 10);
+      const hh    = parseInt(m[4], 10);
+      const mm    = parseInt(m[5], 10);
+      const ss    = m[6] ? parseInt(m[6], 10) : 0;
+      d = new Date(year, month - 1, day, hh, mm, ss);
+    } else {
+      const parsed = new Date(s);
+      d = isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+
+  if (!d || isNaN(d.getTime())) return '';
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  🧪 ฟังก์ชัน Test — รันใน Apps Script Editor เพื่อตรวจสอบ
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -809,8 +1035,8 @@ function handleDebugLogin(p) {
     var matchDetails = [];
     for (var i = 1; i < displayData.length; i++) {
       var row = displayData[i];
-      var uName = uIdx !== -1 ? String(row[uIdx] || '').trim() : '(col not found)';
-      var uId   = idIdx !== -1 ? String(row[idIdx] || '').trim() : '';
+      var uName = uIdx !== -1 ? normBlank(row[uIdx]) : '(col not found)';
+      var uId   = idIdx !== -1 ? normBlank(row[idIdx]) : '';
       var uPass = pIdx !== -1 ? String(row[pIdx] || '').trim() : '(col not found)';
       var userMatch = uName.toLowerCase() === inputUser || uId.toLowerCase() === inputUser;
       var passMatch = uPass === inputPass;
