@@ -11,7 +11,7 @@ const RegisterForm = lazy(() => import('./components/RegisterForm'));
 
 const API_URL =
   import.meta.env?.VITE_APPS_SCRIPT_URL ||
-  "https://script.google.com/macros/s/AKfycbyAreLGZy3v-mmQZ-i77mc43ZPx0yYeMs5qjOOAJp4Ku9qY5z0hXccX-_-tvhhDzzYLtQ/exec";
+  "https://script.google.com/macros/s/AKfycbxjMy2NzVzuWIBlobYAeyBD92PYUQUoxu6n0oF4ReWN91zE9FM7BwrsKuEzWM2ubALIQA/exec";
 
 export default function App() {
   // Theme state
@@ -194,6 +194,8 @@ export default function App() {
               onLogout={handleLogout}
               apiUrl={API_URL}
               onUpdateUser={handleUpdateUser}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
             />
           ) : (
             <UserDashboard
@@ -201,6 +203,8 @@ export default function App() {
               onLogout={handleLogout}
               apiUrl={API_URL}
               onUpdateUser={handleUpdateUser}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
             />
           )
         ) : view === 'register' ? (

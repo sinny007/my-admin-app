@@ -38,6 +38,23 @@ const formatDate = (dateStr) => {
   return isNaN(parsedDate.getTime()) ? dateStr : parsedDate.toLocaleDateString('th-TH');
 };
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr || dateStr === '-') return '-';
+  try {
+    const parsedDate = new Date(dateStr);
+    if (isNaN(parsedDate.getTime())) return dateStr;
+    return parsedDate.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
 let sarabunBase64 = null;
 const loadSarabunFont = async () => {
   if (sarabunBase64) return sarabunBase64;
@@ -56,23 +73,24 @@ const loadSarabunFont = async () => {
   }
 };
 
-export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser }) {
+export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser, isDark: propIsDark, toggleTheme: propToggleTheme }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
   const currentRole = user?.role || 'admin';
 
   // Theme State
-  const [isDark, setIsDark] = useState(() => localStorage.getItem('app_theme') === 'dark');
+  const [internalDark, setInternalDark] = useState(() => localStorage.getItem('app_theme') === 'dark');
+  const isDark = propIsDark !== undefined ? propIsDark : internalDark;
+  const toggleTheme = propToggleTheme || (() => setInternalDark(prev => !prev));
 
   useEffect(() => {
+    if (propIsDark !== undefined) return;
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  const toggleTheme = () => setIsDark(prev => !prev);
+  }, [isDark, propIsDark]);
 
   const [devices, setDevices] = useState(() => {
     try { const c = localStorage.getItem('app_admin_devices'); return c ? JSON.parse(c) : []; } catch { return []; }
@@ -288,8 +306,8 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
       const formattedData = transactions.map(item => ({
         "รหัสธุรกรรม": item.id || '-', "รหัสอุปกรณ์": item.deviceId || '-',
         "ชื่ออุปกรณ์": item.deviceName || '-', "ผู้ยืม": item.username || '-',
-        "วันที่ยืม": formatDate(item.borrowDate), "กำหนดคืน": formatDate(item.expectedReturnDate),
-        "วันที่คืนจริง": formatDate(item.returnDate),
+        "วันที่ยืม": formatDateTime(item.borrowDate), "กำหนดคืน": formatDate(item.expectedReturnDate),
+        "วันที่คืนจริง": formatDateTime(item.returnDate),
         "สถานะ": ['returned', 'คืนแล้ว'].includes(item.status) ? 'คืนแล้ว' : (checkIsOverdue(item) ? 'เกินกำหนดคืน' : 'กำลังยืม')
       }));
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
@@ -312,10 +330,10 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
         styles: { font: font ? 'Sarabun' : 'helvetica', fontSize: 9 },
         headStyles: { fillColor: [79, 70, 229], font: font ? 'Sarabun' : 'helvetica', fontStyle: 'bold' },
         bodyStyles: { font: font ? 'Sarabun' : 'helvetica' },
-        head: [["รหัสธุรกรรม", "ชื่ออุปกรณ์", "ผู้ยืม", "วันที่ยืม", "กำหนดคืน", "สถานะ"]],
+        head: [["รหัสธุรกรรม", "ชื่ออุปกรณ์", "ผู้ยืม", "วันที่ยืม", "กำหนดคืน", "วันที่คืนจริง", "สถานะ"]],
         body: transactions.map(item => [
           String(item.id || '-'), String(item.deviceName || '-'), String(item.username || '-'),
-          formatDate(item.borrowDate), formatDate(item.expectedReturnDate),
+          formatDateTime(item.borrowDate), formatDate(item.expectedReturnDate), formatDateTime(item.returnDate),
           ['returned', 'คืนแล้ว'].includes(item.status) ? 'คืนแล้ว' : (checkIsOverdue(item) ? 'เกินกำหนดคืน' : 'กำลังยืม')
         ]),
         startY: 28, theme: 'grid'
@@ -782,7 +800,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
                         <tr key={t.id} className={isOverdue ? "bg-rose-50/40 dark:bg-rose-950/30" : ""}>
                           <td className="p-3.5 font-bold">{t.deviceName}</td>
                           <td className="p-3.5 font-medium">{t.username}</td>
-                          <td className="p-3.5 text-slate-500 font-mono text-xs">{formatDate(t.borrowDate)}</td>
+                          <td className="p-3.5 text-slate-500 font-mono text-xs">{formatDateTime(t.borrowDate)}</td>
                           <td className="p-3.5 font-mono text-xs">
                             <span className={isOverdue ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-300'}>{formatDate(t.expectedReturnDate)}</span>
                           </td>
@@ -850,7 +868,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
               <table className="w-full text-xs sm:text-sm light-table">
                 <thead>
                   <tr>
-                    {['ชื่ออุปกรณ์','ผู้ยืม','วันที่ยืม','กำหนดคืน','สถานะ'].map((h, i) => (
+                    {['ชื่ออุปกรณ์','ผู้ยืม','วันที่ยืม','กำหนดคืน','วันที่คืนจริง','สถานะ'].map((h, i) => (
                       <th key={i} className="p-3.5 text-left text-[11px] font-bold uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -858,7 +876,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
                 <tbody>
                   {transactions.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-12">
+                      <td colSpan="6" className="text-center py-12">
                         <div className="flex flex-col items-center gap-2">
                           <History className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                           <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">ยังไม่พบประวัติการทำรายการยืม-คืน</p>
@@ -873,8 +891,9 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser })
                         <tr key={t.id}>
                           <td className="p-3.5 font-bold">{t.deviceName}</td>
                           <td className="p-3.5 font-medium">{t.username}</td>
-                          <td className="p-3.5 text-slate-500 font-mono text-xs">{formatDate(t.borrowDate)}</td>
+                          <td className="p-3.5 text-slate-500 font-mono text-xs">{formatDateTime(t.borrowDate)}</td>
                           <td className="p-3.5 text-slate-500 font-mono text-xs">{formatDate(t.expectedReturnDate)}</td>
+                          <td className="p-3.5 text-slate-500 font-mono text-xs">{formatDateTime(t.returnDate)}</td>
                           <td className="p-3.5">
                             {isReturned ? (
                               <span className="status-available inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold">

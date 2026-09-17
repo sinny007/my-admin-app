@@ -92,8 +92,34 @@ export default function EquipmentBorrowDashboard({ user, apiUrl }) {
   }, [getApi]);
 
   useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+    let ignore = false;
+    const runFetch = async () => {
+      try {
+        const data = await getApi({ action: 'getBorrowRecords' });
+        if (!ignore) {
+          if (data.success || data.status === 'success') {
+            setRecords(data.records || data.borrowRecords || []);
+          } else {
+            toast.error(data.message || 'ไม่สามารถโหลดข้อมูลได้');
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('[EquipmentBorrowDashboard] fetchRecords:', err);
+          toast.error('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    };
+    runFetch();
+    return () => {
+      ignore = true;
+    };
+  }, [getApi]);
 
   // ─── Stats ──────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({

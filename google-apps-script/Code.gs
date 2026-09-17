@@ -1,30 +1,23 @@
 /**
  * ============================================================
  *  IT Equipment Borrow System — Google Apps Script Backend
- *  Version: 2.2 (Fixed: column-name-safe writes + login hardening)
+ *  Version: 2.3 (Aligned: Date+Time in Transactions + Users Row 8 Layout)
  *  เชื่อมต่อกับ React Frontend ผ่าน Fetch API
  * ============================================================
  *
- *  🩹 สิ่งที่แก้ไขจากเวอร์ชัน 2.1:
- *  1. handleBorrowDevice() เดิมเขียนแถวใหม่ลง Transactions โดยอิง "ตำแหน่งคอลัมน์"
- *     แบบตายตัว ซึ่งไม่ตรงกับคอลัมน์จริงในชีท (id|deviceId|deviceName|userId|
- *     username|borrowDate|expectedReturnDate|returnDate|status|userRole)
- *     ทำให้ข้อมูลเพี้ยน/สลับคอลัมน์ในบางแถว (ดูตัวอย่างแถวที่ borrowDate
- *     กลายเป็นคำว่า "student") — ตอนนี้เปลี่ยนเป็นการ "หา column index จากชื่อ
- *     header จริงในชีท" แล้วค่อยเขียนค่าลงตำแหน่งที่ถูกต้อง เหมือนที่
- *     handleRegister() ทำกับชีท Users อยู่แล้ว ผลคือแถวเก่ากับแถวใหม่จะมี
- *     โครงสร้างตรงกันเสมอไม่ว่าจะสลับคอลัมน์ยังไงในอนาคต
- *  2. handleLogin() เดิมถ้าในคอลัมน์ username เก็บค่า "-" (เว้นว่างแบบมีขีด)
- *     จะถือเป็นค่าจริง ทำให้เทียบชื่อผู้ใช้ผิดพลาดได้ในบางกรณี ตอนนี้ปรับให้
- *     ถือว่า "-" หรือค่าว่าง = ไม่มี username ตั้งไว้ แล้ว fallback ไปที่คอลัมน์
- *     ID/ชื่อ (คอลัมน์ "user") แทนเหมือนเดิม — ผู้ใช้ที่มีอยู่แล้วยัง login
- *     ได้เหมือนเดิมทุกคน ไม่ต้องแก้ชีท Users เลย
+ *  🩹 สิ่งที่แก้ไขในเวอร์ชัน 2.3:
+ *  1. ประวัติยืมคืน (Transactions): ปรับ borrowDate และ returnDate ให้มีเวลาด้วยเสมอ
+ *     (รูปแบบ yyyy-MM-dd HH:mm เช่น 2026-09-04 13:56) เหมือนประวัติเก่าๆ ในชีท
+ *     และเติม userId / username(ชื่อผู้ยืม) / userRole ให้สมบูรณ์ ไม่ว่างเปล่า
+ *  2. โครงสร้างผู้ใช้ (Users): อิงตามแถวล่าสุดที่เพิ่ม (Row 8):
+ *     คอลัมน์ A: id | B: username | C: password | D: name | E: role
+ *     พร้อมระบบ auto-align Header และย้ายข้อมูลแถวเก่าให้ตรงกันโดยอัตโนมัติ
  *
- *  📋 โครงสร้าง Google Sheets ที่รองรับ (ยืดหยุ่นตามชื่อ header จริงในชีท):
+ *  📋 โครงสร้าง Google Sheets:
  *  ┌─────────────────┬──────────────────────────────────────────────────────────────────┐
  *  │ Sheet Name      │ Columns (Header Row 1)                                           │
  *  ├─────────────────┼──────────────────────────────────────────────────────────────────┤
- *  │ Users           │ id/user | username | password | role | ... (ยืดหยุ่นตามที่มีจริง) │
+ *  │ Users           │ id | username | password | name | role | createdAt | department.. │
  *  │ Devices         │ id | name | category | status | imageUrl | createdAt             │
  *  │ Transactions    │ id | deviceId | deviceName | userId | username | borrowDate |     │
  *  │                 │ expectedReturnDate | returnDate | status | userRole               │
@@ -34,9 +27,8 @@
  *  🔧 วิธีติดตั้ง / อัปเดต:
  *  1. เปิด Google Sheets → Extensions → Apps Script
  *  2. วางโค้ดนี้ทั้งหมดทับโค้ดเดิม → Save (Ctrl+S)
- *  3. แก้ไข SPREADSHEET_ID และ ADMIN_SECRET_KEY ด้านล่าง
+ *  3. แก้ไข SPREADSHEET_ID และ ADMIN_SECRET_KEY ด้านล่าง (ถ้ายังไม่ได้แก้)
  *  4. Deploy → Manage deployments → แก้ไข (Edit) → เลือก New version → Deploy
- *     (หรือ Deploy → New deployment → Web app → Anyone)
  * ============================================================
  */
 
@@ -62,6 +54,52 @@ function getSpreadsheet() {
   return _cachedSS;
 }
 
+// ─── Helper: ตรวจสอบและปรับ Header และข้อมูลของชีท Users ตามแบบ Row 8 ───
+function alignUsersSheet(sheet) {
+  try {
+    const data = sheet.getDataRange().getValues();
+    if (data.length === 0) return;
+    const row1 = data[0].map(h => String(h).trim().toLowerCase());
+
+    const hasName = row1.includes('name') || row1.includes('fullname');
+    const isCol4Role = row1.length >= 4 && (row1[3] === 'role' || row1[3] === 'userrole');
+
+    // ถ้า Row 1 คอลัมน์ที่ 4 เป็น role และยังไม่มีคอลัมน์ name (แบบ 4 คอลัมน์เก่า)
+    if (isCol4Role && !hasName) {
+      const targetHeaders = ['id', 'username', 'password', 'name', 'role', 'createdAt', 'department', 'phone', 'email', 'avatarUrl'];
+      sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
+      sheet.getRange(1, 1, 1, targetHeaders.length)
+        .setFontWeight('bold')
+        .setBackground('#1e293b')
+        .setFontColor('#ffffff');
+
+      // ตรวจสอบแถวข้อมูลเก่า (แถว 2-7) ที่ Col D เก็บ role และ Col E ว่าง
+      const knownRoles = ['student', 'admin', 'staff', 'user'];
+      for (let i = 1; i < data.length; i++) {
+        const r = data[i];
+        const colA = String(r[0] || '').trim();
+        const colB = String(r[1] || '').trim();
+        const colD = String(r[3] || '').trim();
+        const colE = String(r[4] || '').trim();
+
+        if (knownRoles.includes(colD.toLowerCase()) && !colE) {
+          const roleVal = colD.toLowerCase();
+          let nameVal = colA;
+          if (colA && colA !== '-' && !/^\d{10,}$/.test(colA)) {
+            nameVal = colA;
+          } else if (colB && colB !== '-') {
+            nameVal = colB;
+          }
+          sheet.getRange(i + 1, 4).setValue(nameVal); // Col D = name
+          sheet.getRange(i + 1, 5).setValue(roleVal); // Col E = role
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('alignUsersSheet warning:', err);
+  }
+}
+
 // ─── Helper: เปิด Sheet (สร้างใหม่พร้อม Header ถ้ายังไม่มี) ───────────────
 function getSheet(name) {
   const ss = getSpreadsheet();
@@ -71,7 +109,6 @@ function getSheet(name) {
     const headers = {
       [SHEET_USERS]:        ['id', 'username', 'password', 'name', 'role', 'createdAt', 'department', 'phone', 'email', 'avatarUrl'],
       [SHEET_DEVICES]:      ['id', 'name', 'category', 'status', 'imageUrl', 'createdAt'],
-      // ปรับ default header ให้ตรงกับโครงสร้างจริงที่ใช้งานอยู่ (มี userId/userRole แทน name/condition/note)
       [SHEET_TRANSACTIONS]: ['id', 'deviceId', 'deviceName', 'userId', 'username', 'borrowDate',
                              'expectedReturnDate', 'returnDate', 'status', 'userRole'],
       [SHEET_BORROW]:       ['id', 'borrowerName', 'itemName', 'borrowDate', 'returnDate', 'status'],
@@ -83,6 +120,8 @@ function getSheet(name) {
         .setBackground('#1e293b')
         .setFontColor('#ffffff');
     }
+  } else if (name === SHEET_USERS) {
+    alignUsersSheet(sheet);
   }
   return sheet;
 }
@@ -97,7 +136,7 @@ function sheetToObjects(sheet) {
     headers.forEach((h, i) => {
       const val = row[i];
       const formattedVal = val instanceof Date
-        ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
+        ? Utilities.formatDate(val, Session.getScriptTimeZone() || 'Asia/Bangkok', 'yyyy-MM-dd HH:mm')
         : (val !== undefined && val !== null ? val : '');
       obj[h] = formattedVal;
 
@@ -142,8 +181,7 @@ function normBlank(v) {
   return (s === '' || s === '-') ? '' : s;
 }
 
-// ─── Helper: ค้นหา id/role ของผู้ใช้จากชีท Users โดยใช้ username หรือ id ─────
-// ใช้เป็น fallback เวลา Frontend ไม่ได้ส่ง userId/userRole มาด้วยตอนยืมอุปกรณ์
+// ─── Helper: ค้นหา id/role/name ของผู้ใช้จากชีท Users โดยใช้ username หรือ id ─────
 function lookupUserInfo(usernameOrId) {
   const target = String(usernameOrId || '').trim().toLowerCase();
   if (!target) return null;
@@ -155,16 +193,20 @@ function lookupUserInfo(usernameOrId) {
   const headers = data[0].map(h => String(h).trim());
   const uIdx    = findColIndex(headers, ['username', 'user_name', 'loginname']);
   const idIdx   = findColIndex(headers, ['id', 'userid', 'user']);
+  const nameIdx = findColIndex(headers, ['name', 'fullname', 'full_name']);
   const roleIdx = findColIndex(headers, ['role', 'userrole']);
 
   for (let i = 1; i < data.length; i++) {
     const row   = data[i];
     const uname = uIdx  !== -1 ? normBlank(row[uIdx]).toLowerCase()  : '';
     const idval = idIdx !== -1 ? normBlank(row[idIdx]).toLowerCase() : '';
-    if (uname === target || idval === target) {
+    const nval  = nameIdx !== -1 ? normBlank(row[nameIdx]).toLowerCase() : '';
+    if (uname === target || idval === target || nval === target) {
       return {
-        id:   idIdx   !== -1 ? String(row[idIdx]   || '') : '',
-        role: roleIdx !== -1 ? String(row[roleIdx] || '').trim().toLowerCase() : ''
+        id:       idIdx   !== -1 ? String(row[idIdx]   || '') : '',
+        username: uIdx    !== -1 ? String(row[uIdx]    || '') : '',
+        name:     nameIdx !== -1 ? String(row[nameIdx] || '') : (uIdx !== -1 ? String(row[uIdx] || '') : ''),
+        role:     roleIdx !== -1 ? String(row[roleIdx] || '').trim().toLowerCase() : 'student'
       };
     }
   }
@@ -178,12 +220,14 @@ function generateId(prefix) {
   return prefix + '-' + ts + '-' + rnd;
 }
 
-// ─── Helper: วันเวลาปัจจุบัน ──────────────────────────────────────────────
+// ─── Helper: วันเวลาปัจจุบัน (มีเวลาขึ้นด้วยเสมอ เช่น 2026-09-04 13:56) ────────
 function nowDateTime() {
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  const tz = Session.getScriptTimeZone() || 'Asia/Bangkok';
+  return Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HH:mm');
 }
 function todayDate() {
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const tz = Session.getScriptTimeZone() || 'Asia/Bangkok';
+  return Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
 }
 
 // ─── Helper: ส่ง JSON Response ────────────────────────────────────────────
@@ -669,10 +713,11 @@ function handleBorrowDevice(p) {
   // อัปเดตสถานะอุปกรณ์
   devSheet.getRange(devRowIdx, dStIdx + 1).setValue('ถูกยืม');
 
-  // ── เติม userId/userRole อัตโนมัติจากชีท Users ถ้า Frontend ไม่ได้ส่งมา ──
+  // ── เติม userId/userRole/name อัตโนมัติจากชีท Users ถ้า Frontend ไม่ได้ส่งมา ──
   const userInfo      = lookupUserInfo(username);
   const finalUserId   = userId   || (userInfo ? userInfo.id   : '') || username;
-  const finalUserRole = userRole || (userInfo ? userInfo.role : '');
+  const finalUserRole = userRole || (userInfo ? userInfo.role : '') || 'student';
+  const finalUserName = name     || (userInfo ? userInfo.name : '') || username;
 
   // ── บันทึก Transaction: อิงชื่อ header จริงในชีท ไม่ใช่ตำแหน่งตายตัว ──
   const txSheet      = getSheet(SHEET_TRANSACTIONS);
@@ -698,13 +743,13 @@ function handleBorrowDevice(p) {
   if (devIdIdx  !== -1) newRow[devIdIdx]  = deviceId;
   if (devNmIdx  !== -1) newRow[devNmIdx]  = actualDeviceName;
   if (userIdIdx !== -1) newRow[userIdIdx] = finalUserId;
-  if (userNmIdx !== -1) newRow[userNmIdx] = username;
-  if (nameIdx2  !== -1) newRow[nameIdx2]  = name;
-  if (bdIdx     !== -1) newRow[bdIdx]     = nowDateTime();   // ← เดิมใช้ todayDate() ทำให้ไม่มีเวลา
+  if (userNmIdx !== -1) newRow[userNmIdx] = finalUserName; // แสดงชื่อผู้ยืม เช่น "asds sdfsafs" หรือ "นายชิษณุพงศ์ คงนอก"
+  if (nameIdx2  !== -1) newRow[nameIdx2]  = finalUserName;
+  if (bdIdx     !== -1) newRow[bdIdx]     = nowDateTime();   // บันทึก วันที่ + เวลา เช่น 2026-09-18 04:10
   if (erdIdx    !== -1) newRow[erdIdx]    = expectedReturnDate;
   if (rdIdx     !== -1) newRow[rdIdx]     = '';
   if (stIdx2    !== -1) newRow[stIdx2]    = 'borrowed';
-  if (roleIdx2  !== -1) newRow[roleIdx2]  = finalUserRole;
+  if (roleIdx2  !== -1) newRow[roleIdx2]  = finalUserRole;   // มี role เสมอ
   if (condIdx   !== -1) newRow[condIdx]   = '';
   if (noteIdx   !== -1) newRow[noteIdx]   = '';
 

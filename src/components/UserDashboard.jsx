@@ -65,22 +65,23 @@ function StatCard({ label, value, unit, icon: Icon, colorClass, bgClass, delay =
   );
 }
 
-export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser }) {
+export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, isDark: propIsDark, toggleTheme: propToggleTheme }) {
   const API_URL = apiUrl || DEFAULT_API_URL;
 
   // Theme state
-  const [isDark, setIsDark] = useState(() => localStorage.getItem('app_theme') === 'dark');
+  const [internalDark, setInternalDark] = useState(() => localStorage.getItem('app_theme') === 'dark');
+  const isDark = propIsDark !== undefined ? propIsDark : internalDark;
+  const toggleTheme = propToggleTheme || (() => setInternalDark(prev => !prev));
 
   useEffect(() => {
+    if (propIsDark !== undefined) return;
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  const toggleTheme = () => setIsDark(prev => !prev);
+  }, [isDark, propIsDark]);
 
   const [devices, setDevices] = useState(() => {
     try {

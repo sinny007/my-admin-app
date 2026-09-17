@@ -4,7 +4,6 @@ import {
   IdCard, 
   Lock, 
   Shield, 
-  KeyRound, 
   Eye, 
   EyeOff, 
   UserPlus, 
@@ -14,7 +13,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Sparkles, 
-  ShieldCheck, 
   Check
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,7 +36,6 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showAdminKey, setShowAdminKey] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const isMounted = useRef(true);
@@ -101,7 +98,6 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
     const trimmedUsername = formData.username.trim();
     const trimmedPassword = formData.password.trim();
     const trimmedName = formData.name.trim();
-    const trimmedAdminKey = formData.adminKey.trim();
 
     // Validation เช็กความถูกต้องของข้อมูล
     if (!trimmedUsername || !trimmedPassword || !trimmedName) {
