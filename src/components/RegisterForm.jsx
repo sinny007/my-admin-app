@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbyd44rKRB_60-hW-4Cmne9bH52L7FYmlz7XkZDhml7qEb9k7ZVjOQal0-ihKUHWx08dbg/exec";
+  "https://script.google.com/macros/s/AKfycbxjMy2NzVzuWIBlobYAeyBD92PYUQUoxu6n0oF4ReWN91zE9FM7BwrsKuEzWM2ubALIQA/exec";
 export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUrl }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;
 
