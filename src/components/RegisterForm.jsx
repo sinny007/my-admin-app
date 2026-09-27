@@ -234,7 +234,7 @@ export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUr
   };
 
   return (
-    <div className="min-h-screen w-full bg-animated flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans select-none">
+    <div className="min-h-screen w-full bg-login-image flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans select-none">
       {/* Dynamic Background Elements */}
       <div 
         className="absolute top-[-10%] left-[-5%] w-[460px] h-[460px] rounded-full opacity-70 dark:opacity-25 pointer-events-none animate-orb-1"

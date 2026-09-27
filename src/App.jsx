@@ -174,8 +174,8 @@ export default function App() {
       />
 
       <Suspense fallback={
-        <div className="min-h-screen w-full bg-animated flex flex-col items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl p-8 rounded-3xl border border-orange-200/80 dark:border-orange-950/60 shadow-xl shadow-orange-100/60 dark:shadow-none">
+        <div className="min-h-screen w-full bg-login-image flex flex-col items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-4 glass-panel-strong p-8 rounded-3xl shadow-xl">
             <div className="relative w-14 h-14">
               <div className="absolute inset-0 rounded-full border-3 border-orange-100 dark:border-slate-700 animate-spin-slow" />
               <div className="absolute inset-1 rounded-full border-3 border-t-orange-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
@@ -233,7 +233,7 @@ export default function App() {
         ) : (
 
         /* ─── MODERN LOGIN PAGE (ORANGE & WHITE BRIGHT THEME) ──────── */
-        <div className="min-h-screen w-full bg-animated flex items-center justify-center p-4 sm:p-6 relative overflow-hidden select-none">
+        <div className="min-h-screen w-full bg-login-image flex items-center justify-center p-4 sm:p-6 relative overflow-hidden select-none">
 
           {/* Floating Theme Toggle (Login Screen) */}
           <div className="absolute top-4 right-4 z-20">
@@ -269,11 +269,11 @@ export default function App() {
           {/* Login Card Container */}
           <div className="relative z-10 w-full max-w-[440px] animate-scale-in">
 
-            {/* Glowing card border background */}
-            <div className="absolute -inset-1 rounded-[32px] opacity-40 dark:opacity-30 blur-xl pointer-events-none"
+            {/* Glowing card border glow */}
+            <div className="absolute -inset-1 rounded-[32px] opacity-50 dark:opacity-40 blur-xl pointer-events-none"
               style={{ background: 'linear-gradient(135deg, #fb923c, #f97316, #f59e0b)' }} />
 
-            <div className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl p-7 sm:p-9 shadow-2xl shadow-orange-500/10 dark:shadow-none border border-orange-200/90 dark:border-orange-950/70">
+            <div className="relative glass-panel-strong rounded-3xl p-7 sm:p-9 shadow-2xl border">
 
               {/* Header / Brand */}
               <div className="text-center mb-6">

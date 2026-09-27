@@ -362,7 +362,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser, i
   const inputCls = "light-input w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium";
 
   return (
-    <div className={`min-h-screen bg-canvas font-sans selection:bg-indigo-500 selection:text-white pb-24 transition-colors duration-200 ${
+    <div className={`min-h-screen bg-dashboard-image font-sans selection:bg-indigo-500 selection:text-white pb-24 transition-colors duration-200 ${
       isDark ? 'text-slate-100' : 'text-slate-800'
     }`}>
 

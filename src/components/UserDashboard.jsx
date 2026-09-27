@@ -357,7 +357,7 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
   const availableCount = devices.filter(d => d.status === 'พร้อมใช้งาน').length;
 
   return (
-    <div className={`min-h-screen bg-canvas font-sans pb-32 transition-colors duration-200 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+    <div className={`min-h-screen bg-dashboard-image font-sans pb-32 transition-colors duration-200 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
 
       {/* ─── Header ───────────────────────────────────────────────── */}
       <header className={`sticky top-0 z-30 backdrop-blur-xl border-b shadow-xs transition-colors ${

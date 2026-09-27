@@ -83,10 +83,10 @@ export default function BorrowHistory({ records = [], onRefresh, onAdd, onReturn
   };
 
   return (
-    <div className="bg-slate-50 text-slate-800 min-h-screen pb-12 antialiased font-sans">
+    <div className="bg-dashboard-image text-slate-800 dark:text-slate-100 min-h-screen pb-12 antialiased font-sans">
       
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 py-6 px-4 mb-8 shadow-sm sticky top-0 z-10">
+      <header className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-orange-200/80 dark:border-orange-500/20 py-6 px-4 mb-8 shadow-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-md shadow-indigo-100">
