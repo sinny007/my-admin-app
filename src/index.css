@@ -127,6 +127,11 @@ html.dark .skeleton, .dark .skeleton {
   animation: skeleton-shimmer 1.5s infinite;
 }
 
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
 /* ─── Animation Classes ─────────────────────────────────────────── */
 .animate-float        { animation: float 6s ease-in-out infinite; }
 .animate-float-slow   { animation: float-slow 9s ease-in-out infinite; }
@@ -140,6 +145,7 @@ html.dark .skeleton, .dark .skeleton {
 .animate-fade-up      { animation: fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-scale-in     { animation: scale-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-slide-in     { animation: slide-in-right 0.35s ease-out both; }
+.animate-slide-left   { animation: slide-in-left 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-orb-1        { animation: orb-drift-1 20s ease-in-out infinite; }
 .animate-orb-2        { animation: orb-drift-2 24s ease-in-out infinite; }
 .animate-orb-3        { animation: orb-drift-3 18s ease-in-out infinite; }

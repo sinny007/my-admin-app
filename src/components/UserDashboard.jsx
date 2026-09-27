@@ -22,7 +22,9 @@ import {
   CheckSquare,
   Square,
   Layers,
-  ShoppingBag
+  ShoppingBag,
+  Menu,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -102,14 +104,13 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
   });
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeView, setActiveView] = useState('all'); // 'all' | 'catalog' | 'borrows' | 'history'
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState('');
-  const [selectedTransToReturn, setSelectedTransToReturn] = useState(null);
-  const [returnCondition, setReturnCondition] = useState('ปกติ');
-  const [returnNote, setReturnNote] = useState('');
   const [failedImages, setFailedImages] = useState({});
 
   // Bulk Borrow state
@@ -298,51 +299,7 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
     }
   };
 
-  // Return Device
-  const handleReturnDevice = async (e) => {
-    e.preventDefault();
-    if (!selectedTransToReturn) return;
-    setSubmitting(true);
-    const payload = {
-      action: 'returnDevice',
-      transId: selectedTransToReturn.id,
-      deviceId: selectedTransToReturn.deviceId,
-      username: user?.username,
-      userRole: user?.role || 'user',
-      condition: returnCondition,
-      note: returnNote
-    };
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        redirect: 'follow'
-      });
-      const rawText = await response.text();
-      let resData;
-      try { resData = JSON.parse(rawText); }
-      catch { throw new Error("เกิดข้อผิดพลาดในการอ่านข้อมูลตอบกลับ"); }
-
-      if (!isMounted.current) return;
-
-      if (resData.success || resData.status === 'success') {
-        toast.success(`คืนอุปกรณ์ "${selectedTransToReturn.deviceName}" เรียบร้อยแล้ว ขอบคุณครับ`);
-        closeReturnModal();
-        fetchData(true);
-      } else {
-        toast.error("คืนอุปกรณ์ไม่สำเร็จ: " + (resData.message || 'เกิดข้อผิดพลาด'));
-      }
-    } catch (error) {
-      console.error("Return Error:", error);
-      if (isMounted.current) toast.error("เกิดข้อผิดพลาดขณะส่งคำขอคืนอุปกรณ์");
-    } finally {
-      if (isMounted.current) setSubmitting(false);
-    }
-  };
-
   const closeBorrowModal = () => { setSelectedDevice(null); setExpectedReturnDate(''); };
-  const closeReturnModal = () => { setSelectedTransToReturn(null); setReturnNote(''); setReturnCondition('ปกติ'); };
   const handleImageError = (id) => { setFailedImages(prev => ({ ...prev, [id]: true })); };
 
   const currentUsername = String(user?.username || '').toLowerCase().trim();
@@ -409,6 +366,21 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 
           <div className="flex items-center gap-3">
+            {/* ☰ Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+                isDark
+                  ? 'bg-slate-800 border-orange-500/30 text-slate-200 hover:bg-slate-700 hover:text-white'
+                  : 'bg-white border-orange-200 text-slate-700 hover:bg-orange-50 hover:text-orange-600'
+              }`}
+              title="เปิดเมนูนำทาง (Sidebar Menu)"
+              aria-label="เปิดเมนูนำทาง"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div className={`w-10 h-10 rounded-2xl overflow-hidden shrink-0 border p-1 shadow-xs ${
               isDark ? 'bg-slate-800 border-orange-500/30' : 'bg-white border-orange-200'
             }`}>
@@ -562,7 +534,45 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
           />
         </div>
 
+        {/* ─── Navigation Switcher (Segmented Tabs) ───────────────── */}
+        <div className={`flex gap-1.5 p-1.5 rounded-2xl border overflow-x-auto ${
+          isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-100/90 border-slate-200'
+        }`}>
+          {[
+            { key: 'all', label: 'ภาพรวมทั้งหมด', icon: Boxes, count: null },
+            { key: 'catalog', label: 'แคตตาล็อกอุปกรณ์', icon: Laptop, count: availableCount },
+            { key: 'borrows', label: 'อุปกรณ์ที่กำลังยืม', icon: Clock, count: myActiveBorrows.length, countColor: myActiveBorrows.length > 0 ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300' : '' },
+            { key: 'history', label: 'ประวัติการยืม-คืน', icon: History, count: myHistory.length },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeView === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveView(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-orange-500 text-white shadow-xs'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-orange-500'}`} />
+                <span>{tab.label}</span>
+                {tab.count !== null && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    isActive ? 'bg-white/20 text-white' : tab.countColor || (isDark ? 'bg-slate-700 text-slate-300' : 'bg-white text-slate-700 border border-slate-200')
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         {/* ─── Section 1: My Active Borrows ────────────────────────── */}
+        {(activeView === 'all' || activeView === 'borrows') && (
         <section className="space-y-4 animate-fade-up delay-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -577,6 +587,19 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
               </h2>
             </div>
           </div>
+
+          {/* Notice: Return policy */}
+          {myActiveBorrows.length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/90 dark:border-amber-800/60 flex items-start gap-3 text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
+              <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">นโยบายการส่งคืนอุปกรณ์:</p>
+                <p className="text-amber-800/90 dark:text-amber-300/90">
+                  ผู้ใช้งานไม่สามารถกดคืนเองในระบบได้ เมื่อใช้งานเสร็จสิ้นแล้ว กรุณานำอุปกรณ์ตัวจริงมาส่งคืนกับเจ้าหน้าที่/ผู้ดูแลระบบ (Admin) เพื่อตรวจเช็คสภาพและทำการบันทึกรับคืนในระบบ
+                </p>
+              </div>
+            </div>
+          )}
 
           {myActiveBorrows.length === 0 ? (
             <div className={`glass-card rounded-2xl p-8 text-center border border-dashed ${
@@ -598,7 +621,7 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
                       <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider">ชื่ออุปกรณ์</th>
                       <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider">วันที่ยืม</th>
                       <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider">กำหนดคืน</th>
-                      <th className="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider">การกระทำ</th>
+                      <th className="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider">สถานะการส่งคืน</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -620,14 +643,13 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
                             )}
                           </td>
                           <td className="px-5 py-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedTransToReturn(t)}
-                              className="btn-gradient-emerald inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>ส่งคืนอุปกรณ์</span>
-                            </button>
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs">
+                                <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                <span>รอส่งคืนที่แอดมิน</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400">นำส่งคืนที่เคาน์เตอร์บริการ</span>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -638,8 +660,10 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
             </div>
           )}
         </section>
+        )}
 
         {/* ─── Section 2: Equipment Catalog ────────────────────────── */}
+        {(activeView === 'all' || activeView === 'catalog') && (
         <section className="space-y-5 animate-fade-up delay-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
@@ -859,8 +883,10 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
             </div>
           )}
         </section>
+        )}
 
         {/* ─── Section 3: My Borrow History ────────────────────────── */}
+        {(activeView === 'all' || activeView === 'history') && (
         <section className="space-y-4 animate-fade-up delay-400">
           <div className="flex items-center gap-2.5">
             <div className={`p-2 rounded-xl border ${
@@ -928,6 +954,7 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
             </div>
           )}
         </section>
+        )}
 
         {/* Footer */}
         <footer className="pt-6 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 border-t border-slate-200 dark:border-slate-800">
@@ -1204,111 +1231,161 @@ export default function UserDashboard({ user, onLogout, apiUrl, onUpdateUser, is
         </div>
       )}
 
-      {/* ─── Modal: ส่งคืนอุปกรณ์ ───────────────────────────────────── */}
-      {selectedTransToReturn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs" onClick={closeReturnModal} />
-          <div className="relative w-full max-w-md z-10 animate-scale-in">
-            <div className={`rounded-3xl p-6 sm:p-8 border shadow-2xl ${
-              isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}>
+      {/* ─── Modern Sliding Sidebar Drawer (3 ขีด) ────────────────── */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+
+          {/* Drawer Sheet */}
+          <div className={`relative w-80 max-w-[85vw] h-full flex flex-col z-10 shadow-2xl animate-slide-left border-r transition-colors ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-orange-200 text-slate-800'
+          }`}>
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-orange-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl overflow-hidden border p-1 shadow-xs ${
+                  isDark ? 'bg-slate-800 border-orange-500/30' : 'bg-orange-50 border-orange-200'
+                }`}>
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black tracking-tight gradient-text">ระบบยืม-คืนอุปกรณ์</h3>
+                  <span className="text-[10px] text-slate-400">IT Equipment System</span>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={closeReturnModal}
-                className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="ปิดเมนู"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
 
-              <div className="flex items-center gap-3.5 mb-5">
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black tracking-tight">ส่งคืนอุปกรณ์</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">ระบุสภาพอุปกรณ์และหมายเหตุเพื่อบันทึกการส่งคืน</p>
-                </div>
-              </div>
-
-              <div className={`p-4 rounded-2xl mb-5 border ${
-                isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
+            {/* User Profile Mini Card */}
+            <div className="p-4 border-b border-orange-100/70 dark:border-slate-800">
+              <div className={`p-3.5 rounded-2xl border transition-all ${
+                isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-orange-50/70 border-orange-200/80'
               }`}>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">อุปกรณ์ที่ส่งคืน</span>
-                <p className="text-sm font-black mt-0.5">{selectedTransToReturn.deviceName}</p>
-                <span className="text-xs text-slate-500 font-mono">รหัสรายการ: {selectedTransToReturn.id}</span>
-              </div>
-
-              <form onSubmit={handleReturnDevice} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                    สภาพอุปกรณ์ ณ ตอนส่งคืน
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setReturnCondition('ปกติ')}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                        returnCondition === 'ปกติ'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-300 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      ✓ ใช้งานได้ปกติ สมบูรณ์
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReturnCondition('ชำรุด/มีปัญหา')}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                        returnCondition === 'ชำรุด/มีปัญหา'
-                          ? 'bg-rose-50 dark:bg-rose-950/70 border-rose-300 dark:border-rose-600 text-rose-800 dark:text-rose-300 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      ⚠ ชำรุด / มีปัญหา
-                    </button>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-orange-300 dark:border-orange-600 shrink-0 flex items-center justify-center bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300">
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-6 h-6" />
+                    )}
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black truncate">{user?.name || user?.username || 'ผู้ใช้งาน'}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{user?.department || 'สมาชิกทั่วไป'}</p>
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-orange-100 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                      {user?.role || 'user'}
+                    </span>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => { setIsDrawerOpen(false); setIsProfileOpen(true); }}
+                  className="mt-3 w-full py-1.5 px-3 rounded-xl border border-orange-200 dark:border-slate-700 text-[11px] font-bold text-orange-700 dark:text-orange-300 bg-white dark:bg-slate-900 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <User className="w-3 h-3" />
+                  <span>แก้ไขข้อมูลโปรไฟล์</span>
+                </button>
+              </div>
+            </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                    หมายเหตุเพิ่มเติม (ถ้ามี)
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="เช่น ส่งคืนพร้อมกระเป๋า หรือแจ้งจุดที่มีตำหนิ..."
-                    value={returnNote}
-                    onChange={(e) => setReturnNote(e.target.value)}
-                    className="light-input w-full p-3 rounded-xl text-sm font-medium resize-none"
-                  />
-                </div>
+            {/* Navigation Links */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">มุมมองเนื้อหา</div>
 
-                <div className="flex gap-3 pt-2">
+              {[
+                { key: 'all', label: 'ภาพรวมทั้งหมด (All)', icon: Boxes, badge: null },
+                { key: 'catalog', label: 'แคตตาล็อกอุปกรณ์', icon: Laptop, badge: availableCount },
+                { key: 'borrows', label: 'อุปกรณ์ที่กำลังยืม', icon: Clock, badge: myActiveBorrows.length, badgeCls: myActiveBorrows.length > 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : '' },
+                { key: 'history', label: 'ประวัติการยืม-คืน', icon: History, badge: myHistory.length },
+              ].map(item => {
+                const Icon = item.icon;
+                const isActive = activeView === item.key;
+                return (
                   <button
+                    key={item.key}
                     type="button"
-                    onClick={closeReturnModal}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold cursor-pointer"
+                    onClick={() => { setActiveView(item.key); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-orange-500 text-white shadow-xs'
+                        : isDark
+                          ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          : 'text-slate-700 hover:bg-orange-50 hover:text-orange-600'
+                    }`}
                   >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-bold btn-gradient-emerald shadow-emerald-500/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>กำลังบันทึก...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>ยืนยันการคืน</span>
-                      </>
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge !== null && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isActive ? 'bg-white/20 text-white' : item.badgeCls || (isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600')
+                      }`}>
+                        {item.badge}
+                      </span>
                     )}
                   </button>
+                );
+              })}
+
+              <div className="pt-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">ระบบและการตั้งค่า</div>
+
+              {/* Theme Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-orange-50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+                  <span>ธีม: {isDark ? 'โหมดมืด (Dark)' : 'โหมดสว่าง (Light)'}</span>
                 </div>
-              </form>
+                <span className="text-[10px] text-slate-400">สลับ</span>
+              </button>
+
+              {/* Refresh Data */}
+              <button
+                type="button"
+                onClick={() => { fetchData(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-orange-50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <RotateCcw className={`w-4 h-4 text-orange-500 ${loading ? 'animate-spin' : ''}`} />
+                  <span>รีเฟรชข้อมูล (Sync)</span>
+                </div>
+                <span className="text-[10px] text-slate-400">อัปเดต</span>
+              </button>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-orange-100 dark:border-slate-800 space-y-2">
+              <button
+                type="button"
+                onClick={() => { setIsDrawerOpen(false); onLogout(); }}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 transition-all cursor-pointer shadow-xs"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>ออกจากระบบ</span>
+              </button>
+              <div className="text-center text-[10px] text-slate-400">
+                v2.5 • Antigravity IT Asset Console
+              </div>
             </div>
           </div>
         </div>

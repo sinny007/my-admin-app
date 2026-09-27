@@ -20,7 +20,9 @@ import {
   Loader2,
   User,
   Sun,
-  Moon
+  Moon,
+  Menu,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmModal from './ConfirmModal';
@@ -103,6 +105,7 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser, i
   });
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('devices');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newDevice, setNewDevice] = useState({ 
     name: '', 
     category: DEFAULT_CATEGORY, 
@@ -192,7 +195,13 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser, i
       onConfirm: async () => {
         setActionLoading(true);
         try {
-          const data = await postToAppsScript({ action: 'returnDevice', transId: transaction.id, deviceId: transaction.deviceId });
+          const data = await postToAppsScript({
+            action: 'returnDevice',
+            transId: transaction.id,
+            deviceId: transaction.deviceId,
+            userRole: 'admin',
+            adminUsername: user?.username || 'admin'
+          });
           if (data.status === 'success' || data.success) {
             toast.success(`รับคืนอุปกรณ์ "${transaction.deviceName}" สำเร็จแล้ว`);
             setConfirmState(prev => ({ ...prev, isOpen: false }));
@@ -364,6 +373,21 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser, i
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
 
           <div className="flex items-center gap-3">
+            {/* ☰ Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+                isDark
+                  ? 'bg-slate-800 border-orange-500/30 text-slate-200 hover:bg-slate-700 hover:text-white'
+                  : 'bg-white border-orange-200 text-slate-700 hover:bg-orange-50 hover:text-orange-600'
+              }`}
+              title="เปิดเมนูนำทาง (Sidebar Menu)"
+              aria-label="เปิดเมนูนำทาง"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div className={`w-10 h-10 rounded-2xl overflow-hidden shrink-0 border p-1 shadow-xs ${
               isDark ? 'bg-slate-800 border-orange-500/30' : 'bg-white border-orange-200'
             }`}>
@@ -953,6 +977,213 @@ export default function AdminDashboard({ user, onLogout, apiUrl, onUpdateUser, i
         onUpdateUser={onUpdateUser}
         apiUrl={APPS_SCRIPT_URL}
       />
+
+      {/* ─── Admin Sliding Sidebar Drawer (3 ขีด) ────────────────── */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+
+          {/* Drawer Sheet */}
+          <div className={`relative w-80 max-w-[85vw] h-full flex flex-col z-10 shadow-2xl animate-slide-left border-r transition-colors ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-orange-200 text-slate-800'
+          }`}>
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-orange-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl overflow-hidden border p-1 shadow-xs ${
+                  isDark ? 'bg-slate-800 border-orange-500/30' : 'bg-orange-50 border-orange-200'
+                }`}>
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black tracking-tight gradient-text">IT Asset Console</h3>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Administrator</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="ปิดเมนู"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Admin Profile Mini Card */}
+            <div className="p-4 border-b border-orange-100/70 dark:border-slate-800">
+              <div className={`p-3.5 rounded-2xl border transition-all ${
+                isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-amber-50/70 border-amber-200/80'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-amber-400 dark:border-amber-600 shrink-0 flex items-center justify-center bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="Admin" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-6 h-6" />
+                    )}
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black truncate">{user?.name || user?.username || 'ผู้ดูแลระบบ'}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{user?.email || 'admin@system.local'}</p>
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      ผู้ดูแลระบบสูงสุด
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setIsDrawerOpen(false); setIsProfileOpen(true); }}
+                  className="mt-3 w-full py-1.5 px-3 rounded-xl border border-amber-200 dark:border-slate-700 text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <User className="w-3 h-3" />
+                  <span>แก้ไขโปรไฟล์ผู้ดูแล</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid in Drawer */}
+            <div className="px-4 pt-3 pb-1 grid grid-cols-3 gap-2">
+              <div className={`p-2.5 rounded-xl border text-center ${
+                isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-bold uppercase">ทั้งหมด</div>
+                <div className="text-sm font-black text-indigo-600 dark:text-indigo-400">{devices.length}</div>
+              </div>
+              <div className={`p-2.5 rounded-xl border text-center ${
+                isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-bold uppercase">ยืมอยู่</div>
+                <div className="text-sm font-black text-amber-600 dark:text-amber-400">{borrowedTransactions.length}</div>
+              </div>
+              <div className={`p-2.5 rounded-xl border text-center ${
+                isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-bold uppercase">ล่าช้า</div>
+                <div className="text-sm font-black text-rose-600 dark:text-rose-400">{overdueCount}</div>
+              </div>
+            </div>
+
+            {/* Navigation & Actions */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">เมนูการจัดการ</div>
+
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => { setActiveTab(tab.key); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : isDark
+                          ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : tab.color}`} />
+                      <span>{tab.label}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-white/20 text-white' : tab.badgeColor
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <div className="pt-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">ออกรายงานข้อมูล (Reports)</div>
+
+              {/* Export to Excel */}
+              <button
+                type="button"
+                onClick={() => { setIsDrawerOpen(false); exportTransactionsToExcel(); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>ส่งออกไฟล์ Excel (.xlsx)</span>
+                </div>
+                <span className="text-[10px] text-emerald-600 font-bold">Export</span>
+              </button>
+
+              {/* Export to PDF */}
+              <button
+                type="button"
+                onClick={() => { setIsDrawerOpen(false); exportTransactionsToPDF(); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-rose-50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                  <span>ส่งออกรายงาน PDF (.pdf)</span>
+                </div>
+                <span className="text-[10px] text-rose-600 font-bold">PDF</span>
+              </button>
+
+              <div className="pt-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">ระบบและการตั้งค่า</div>
+
+              {/* Theme Toggle */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-orange-50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+                  <span>ธีม: {isDark ? 'โหมดมืด (Dark)' : 'โหมดสว่าง (Light)'}</span>
+                </div>
+                <span className="text-[10px] text-slate-400">สลับ</span>
+              </button>
+
+              {/* Refresh Data */}
+              <button
+                type="button"
+                onClick={() => { setIsDrawerOpen(false); fetchData(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-orange-50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <RefreshCw className={`w-4 h-4 text-orange-500 ${loading ? 'animate-spin' : ''}`} />
+                  <span>รีเฟรชข้อมูล (Sync)</span>
+                </div>
+                <span className="text-[10px] text-slate-400">อัปเดต</span>
+              </button>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-orange-100 dark:border-slate-800 space-y-2">
+              <button
+                type="button"
+                onClick={() => { setIsDrawerOpen(false); onLogout(); }}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 transition-all cursor-pointer shadow-xs"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>ออกจากระบบ</span>
+              </button>
+              <div className="text-center text-[10px] text-slate-400">
+                v2.5 • Antigravity IT Asset Console
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

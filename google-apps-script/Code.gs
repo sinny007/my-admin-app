@@ -556,7 +556,7 @@ function handleGetData() {
 function handleAddDevice(p) {
   if (p.userRole !== 'admin') return jsonErr('ไม่มีสิทธิ์ (ต้องเป็น Admin)');
   const name     = String(p.name     || '').trim();
-  const category = String(p.category || 'อุปกรณ์ต่อพ่วงและไอทีอื่นๆ (Other IT Accessories)').trim();
+  const category = String(p.category || 'คอมพิวเตอร์และอุปกรณ์ IT').trim();
   const status   = String(p.status   || 'พร้อมใช้งาน').trim();
   const imageUrl = String(p.imageUrl || '').trim() || 'https://placehold.co/150x150?text=No+Image';
   if (!name) return jsonErr('กรุณากรอกชื่ออุปกรณ์');
@@ -670,6 +670,11 @@ function handleBorrowDevice(p) {
 }
 
 function handleReturnDevice(p) {
+  const userRole = String(p.userRole || p.role || '').toLowerCase().trim();
+  if (userRole && userRole !== 'admin') {
+    return jsonErr('เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถบันทึกรับคืนอุปกรณ์ได้');
+  }
+
   const transId   = String(p.transId   || '').trim();
   const deviceId  = String(p.deviceId  || '').trim();
   const condition = String(p.condition || 'ปกติ').trim();
