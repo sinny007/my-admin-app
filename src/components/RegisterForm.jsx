@@ -20,7 +20,7 @@ import confetti from 'canvas-confetti';
 
 const DEFAULT_APPS_SCRIPT_URL =
   import.meta.env?.VITE_APPS_SCRIPT_URL ||
-  "https://script.google.com/macros/s/AKfycbzj6oXUlGnNKe2P_cnDIciWHWVQXwWtAMS7F-ZywIcqGp6IIXXGRve9ANIn8c3znaoujw/exec";
+  "https://script.google.com/macros/s/AKfycbwz4JB93_GP593aAvNnbhzfk7kN3v9GoaKI-Qo1Lk9ZA5NF1glEMpBesJMAiKwzWoR4OQ/exec";
 
 export default function RegisterForm({ onSwitchToLogin, onRegisterSuccess, apiUrl }) {
   const APPS_SCRIPT_URL = apiUrl || DEFAULT_APPS_SCRIPT_URL;

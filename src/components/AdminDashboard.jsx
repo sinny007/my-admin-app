@@ -33,7 +33,7 @@ import { IT_CATEGORIES, DEFAULT_CATEGORY } from '../constants/itCategories';
 const DEFAULT_APPS_SCRIPT_URL =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APPS_SCRIPT_URL) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_APPS_SCRIPT_URL) ||
-  "https://script.google.com/macros/s/AKfycbzj6oXUlGnNKe2P_cnDIciWHWVQXwWtAMS7F-ZywIcqGp6IIXXGRve9ANIn8c3znaoujw/exec";
+  "https://script.google.com/macros/s/AKfycbwz4JB93_GP593aAvNnbhzfk7kN3v9GoaKI-Qo1Lk9ZA5NF1glEMpBesJMAiKwzWoR4OQ/exec";
 const formatDate = (dateStr) => {
   if (!dateStr || dateStr === '-') return '-';
   const parsedDate = new Date(dateStr);

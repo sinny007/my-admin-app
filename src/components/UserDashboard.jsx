@@ -33,7 +33,7 @@ import { IT_CATEGORIES } from '../constants/itCategories';
 
 const DEFAULT_API_URL =
   import.meta.env?.VITE_APPS_SCRIPT_URL ||
-  "https://script.google.com/macros/s/AKfycbzj6oXUlGnNKe2P_cnDIciWHWVQXwWtAMS7F-ZywIcqGp6IIXXGRve9ANIn8c3znaoujw/exec";
+  "https://script.google.com/macros/s/AKfycbwz4JB93_GP593aAvNnbhzfk7kN3v9GoaKI-Qo1Lk9ZA5NF1glEMpBesJMAiKwzWoR4OQ/exec";
 
 const formatDisplayDate = (dateStr) => {
   if (!dateStr || dateStr === '-') return '-';
