@@ -175,7 +175,7 @@ export default function App() {
 
       <Suspense fallback={
         <div className="min-h-screen w-full bg-login-image flex flex-col items-center justify-center p-6">
-          <div className="flex flex-col items-center gap-4 glass-panel-strong p-8 rounded-3xl shadow-xl">
+          <div className="flex flex-col items-center gap-4 glass-panel-strong p-8 rounded-3xl shadow-xl border border-orange-200/80 dark:border-orange-900/60">
             <div className="relative w-14 h-14">
               <div className="absolute inset-0 rounded-full border-3 border-orange-100 dark:border-slate-700 animate-spin-slow" />
               <div className="absolute inset-1 rounded-full border-3 border-t-orange-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
@@ -273,7 +273,7 @@ export default function App() {
             <div className="absolute -inset-1 rounded-[32px] opacity-50 dark:opacity-40 blur-xl pointer-events-none"
               style={{ background: 'linear-gradient(135deg, #fb923c, #f97316, #f59e0b)' }} />
 
-            <div className="relative glass-panel-strong rounded-3xl p-7 sm:p-9 shadow-2xl border">
+            <div className="relative glass-panel-strong rounded-3xl p-7 sm:p-9 shadow-2xl border border-orange-200/80 dark:border-orange-900/60">
 
               {/* Header / Brand */}
               <div className="text-center mb-6">

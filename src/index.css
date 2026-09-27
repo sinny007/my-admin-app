@@ -171,86 +171,73 @@ html.dark .bg-animated, .dark .bg-animated {
 }
 
 /* ─── Login Page — Photo Background (Image 1: อาคาร 39) ─────────────── */
+/* Light mode: warm white-orange semi-transparent veil layered over photo */
 .bg-login-image {
-  position: relative;
-  background-image: url('/bg-login.jpg');
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
-.bg-login-image::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  /* Light mode: warm white-orange veil so card stays legible */
-  background:
-    linear-gradient(160deg,
+  background-image:
+    linear-gradient(
+      160deg,
       rgba(255, 247, 237, 0.78) 0%,
       rgba(255, 237, 213, 0.68) 40%,
       rgba(254, 215, 170, 0.55) 70%,
       rgba(253, 186, 116, 0.45) 100%
     ),
-    radial-gradient(ellipse at 60% 40%, rgba(249, 115, 22, 0.10) 0%, transparent 65%);
-  pointer-events: none;
+    url('/bg-login.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
-html.dark .bg-login-image::before, .dark .bg-login-image::before {
-  /* Dark mode: deep dark overlay with subtle orange corona */
-  background:
-    linear-gradient(160deg,
-      rgba(10, 12, 18, 0.82) 0%,
-      rgba(15, 17, 23, 0.76) 50%,
-      rgba(20, 10, 5, 0.80) 100%
+/* Dark mode: deep charcoal + orange corona over photo */
+html.dark .bg-login-image, .dark .bg-login-image {
+  background-image:
+    linear-gradient(
+      160deg,
+      rgba(10, 12, 18, 0.84) 0%,
+      rgba(15, 17, 23, 0.80) 50%,
+      rgba(20, 10, 5, 0.82) 100%
     ),
-    radial-gradient(ellipse at 30% 60%, rgba(234, 88, 12, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse at 75% 20%, rgba(245, 158, 11, 0.16) 0%, transparent 50%);
-}
-.bg-login-image > * {
-  position: relative;
-  z-index: 1;
+    radial-gradient(ellipse at 30% 65%, rgba(234, 88, 12, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 20%, rgba(245, 158, 11, 0.16) 0%, transparent 50%),
+    url('/bg-login.jpg');
+  background-size: cover, cover, cover, cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 /* ─── Dashboard Pages — Photo Background (Image 2: สนง.อธิการบดี) ───── */
+/* Light mode: clean warm white veil, image subtly visible */
 .bg-dashboard-image {
-  position: relative;
-  background-image: url('/bg-dashboard.jpg');
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 251, 247, 0.87) 0%,
+      rgba(255, 247, 237, 0.83) 40%,
+      rgba(255, 250, 245, 0.89) 100%
+    ),
+    url('/bg-dashboard.jpg');
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
-.bg-dashboard-image::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  /* Light mode: clean white-warm overlay, image subtly visible */
-  background:
-    linear-gradient(180deg,
-      rgba(255, 251, 247, 0.85) 0%,
-      rgba(255, 247, 237, 0.80) 35%,
-      rgba(255, 250, 245, 0.88) 100%
-    ),
-    radial-gradient(ellipse at 80% 20%, rgba(249, 115, 22, 0.08) 0%, transparent 50%);
-  pointer-events: none;
-}
-html.dark .bg-dashboard-image::before, .dark .bg-dashboard-image::before {
-  /* Dark mode: dark navy-charcoal tint with orange accent glow */
-  background:
-    linear-gradient(180deg,
-      rgba(8, 10, 16, 0.87) 0%,
-      rgba(12, 14, 22, 0.84) 40%,
-      rgba(10, 8, 14, 0.88) 100%
+/* Dark mode: dark navy + orange glow over photo */
+html.dark .bg-dashboard-image, .dark .bg-dashboard-image {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(8, 10, 16, 0.88) 0%,
+      rgba(12, 14, 22, 0.86) 40%,
+      rgba(10, 8, 14, 0.90) 100%
     ),
     radial-gradient(ellipse at 20% 15%, rgba(234, 88, 12, 0.26) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 80%, rgba(180, 83, 9, 0.20) 0%, transparent 45%);
+    radial-gradient(ellipse at 80% 80%, rgba(180, 83, 9, 0.20) 0%, transparent 45%),
+    url('/bg-dashboard.jpg');
+  background-size: cover, cover, cover, cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
-.bg-dashboard-image > * {
-  position: relative;
-  z-index: 1;
-}
-
 /* ─── Dashboard Canvas with Subtle Geometric Patterns ───────────── */
 .bg-canvas {
   background-color: #fffbf7;
